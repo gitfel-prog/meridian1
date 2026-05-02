@@ -3516,6 +3516,8 @@ const COEFF = {
 };
 
 /* ─── СОСТОЯНИЕ ─── */
+const _srcControllers = {};
+
 let state = {
   theme: 'lamp',
   pair: '',
@@ -5242,8 +5244,6 @@ function restoreHiddenRows() {
 
 
 /* ══ ВСПОМОГАТЕЛЬНЫЕ: ИСТОЧНИКИ ДАННЫХ ══ */
-const _srcControllers = {};
-
 function getTimeout() { return (state.fetchTimeout||15)*1000; }
 
 function setSrcStatus(group, idx, status, msg) {
