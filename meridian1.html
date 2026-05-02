@@ -5241,6 +5241,65 @@ function restoreHiddenRows() {
 }
 
 
+/* ══ ВСПОМОГАТЕЛЬНЫЕ: ИСТОЧНИКИ ДАННЫХ ══ */
+const _srcControllers = {};
+
+function getTimeout() { return (state.fetchTimeout||15)*1000; }
+
+function setSrcStatus(group, idx, status, msg) {
+  const dotEl = document.querySelector(`.src-status-dot[data-group="${group}"][data-idx="${idx}"]`);
+  const msgEl = document.querySelector(`.src-status-msg[data-group="${group}"][data-idx="${idx}"]`);
+  const colors = { ok:'#4caf50', fail:'#f44336', fetch:'#ff9800', connect:'#2196f3', idle:'#888' };
+  if (dotEl) dotEl.style.background = colors[status]||'#888';
+  if (msgEl) msgEl.textContent = msg||'';
+  // fallback — ищем по id
+  const fbDot = document.getElementById(`src-dot-${group}-${idx}`);
+  const fbMsg = document.getElementById(`src-msg-${group}-${idx}`);
+  if (fbDot) fbDot.style.background = colors[status]||'#888';
+  if (fbMsg) fbMsg.textContent = msg||'';
+  // обновляем текст статуса под полем ввода
+  const legacyMsg = document.getElementById(`srckey-${group}-${idx}-status`);
+  if (legacyMsg) legacyMsg.textContent = msg||'';
+}
+
+function addSrcLog(group, idx, text, type) {
+  const logEl = document.getElementById(`src-log-${group}-${idx}`);
+  if (!logEl) return;
+  const line = document.createElement('div');
+  line.style.color = type==='ok'?'#4caf50':type==='fail'?'#f44336':'#ccc';
+  line.style.fontSize = '9px';
+  line.textContent = `${new Date().toLocaleTimeString('ru-RU')} — ${text}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function fetchWithProxy(url, signal) {
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => u
+  ];
+  for (const makeUrl of proxies) {
+    try {
+      const resp = await fetch(makeUrl(url), signal ? { signal } : {});
+      if (resp.ok) return resp;
+    } catch(e) { if (e.name==='AbortError') throw e; }
+  }
+  throw new Error('Все прокси недоступны');
+}
+
+function injectFREDbond(id, val, date) {
+  const map = {
+    'DGS10': 'bo-fact-y10',
+    'DGS2':  'bo-fact-y2',
+    'FEDFUNDS': 'bo-fact-fed'
+  };
+  const elId = map[id];
+  if (!elId) return;
+  const el = document.getElementById(elId);
+  if (el) { el.textContent = val; el.title = date; }
+}
+
 /* ══ FETCH: КНОПКИ PLAY ══ */
 async function fetchSrcItem(group, idx) {
   if (group === 'macro') {
