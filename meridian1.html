@@ -41,6 +41,9 @@
   color: var(--text);
   line-height: 1.55;
   max-width: 320px;
+  width: 320px;
+  white-space: normal;
+  word-wrap: break-word;
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
   pointer-events: none;
 }
@@ -4772,6 +4775,7 @@ function closeModal(id) { document.getElementById(id)?.classList.remove('open');
 /* ─── ИНИЦИАЛИЗАЦИЯ ─── */
 function init() {
   loadFromStorage();
+  loadSrcKeys();
 
   // Тема
   applyTheme(state.theme||'lamp');
@@ -5236,6 +5240,83 @@ function restoreHiddenRows() {
   Object.keys(state.hiddenRows).forEach(id=>{const row=document.querySelector(`tr[data-row="${id}"]`);if(row) row.style.display='none';});
 }
 
+
+/* ══ FETCH: КНОПКИ PLAY ══ */
+async function fetchSrcItem(group, idx) {
+  if (group === 'macro') {
+    await fetchFREDwithInject(group, idx);
+  } else if (group === 'vix') {
+    await fetchRiskData();
+  } else {
+    showNotif(`ℹ Источник ${group} — обновление запущено`, 'info');
+  }
+}
+
+async function fetchGroup(group) {
+  if (group === 'macro') {
+    await fetchFREDwithInject(group, 0);
+  } else if (group === 'vix') {
+    await fetchRiskData();
+  } else {
+    showNotif(`ℹ Группа ${group} — обновление запущено`, 'info');
+  }
+}
+
+async function fetchRiskData() {
+  const TICKERS = [
+    { id: 'risk-fact-vix', prev: 'risk-prev-vix', sym: '^VIX', label: 'VIX' },
+    { id: 'risk-fact-move', prev: 'risk-prev-move', sym: '^MOVE', label: 'MOVE' }
+  ];
+  for (const t of TICKERS) {
+    try {
+      const proxy = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t.sym)}?interval=1d&range=5d`;
+      const url = `https://corsproxy.io/?${encodeURIComponent(proxy)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const closes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      if (closes && closes.length >= 2) {
+        const cur = closes[closes.length-1], prev = closes[closes.length-2];
+        const elF = document.getElementById(t.id), elP = document.getElementById(t.prev);
+        if (elF) elF.textContent = cur.toFixed(2);
+        if (elP) elP.textContent = prev.toFixed(2);
+        addSrcLog('vix', 0, `${t.label}: ${cur.toFixed(2)}`, 'ok');
+      }
+    } catch(e) {
+      addSrcLog('vix', 0, `${t.label}: сбой — ${e.message}`, 'fail');
+    }
+  }
+  setSrcStatus('vix', 0, 'ok', new Date().toLocaleTimeString('ru-RU'));
+}
+
+/* ══ API KEY: ГЛАЗИК + СОХРАНЕНИЕ ══ */
+function toggleKeyVis(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.type = (el.type === 'password') ? 'text' : 'password';
+}
+
+function saveSrcKey(group, idx, value) {
+  const storKey = `srckey_${group}_${idx}`;
+  try { localStorage.setItem(storKey, value); } catch(e) {}
+  if (!state.srcKeys) state.srcKeys = {};
+  if (!state.srcKeys[group]) state.srcKeys[group] = [];
+  state.srcKeys[group][idx] = value;
+}
+
+function loadSrcKeys() {
+  const groups = ['macro', 'calendar', 'risk'];
+  groups.forEach(group => {
+    for (let idx = 0; idx < 3; idx++) {
+      const storKey = `srckey_${group}_${idx}`;
+      const val = localStorage.getItem(storKey);
+      if (val) {
+        const el = document.getElementById(`srckey-${group}-${idx}`);
+        if (el) el.value = val;
+        saveSrcKey(group, idx, val);
+      }
+    }
+  });
+}
 
 /* ─── ЗАПУСК ─── */
 document.addEventListener('DOMContentLoaded', init);
