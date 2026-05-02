@@ -8,6 +8,118 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
+
+/* ══ HELP BUTTON & CARD ══ */
+.help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 8px;
+  cursor: pointer;
+  margin-left: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.help-btn:hover { background: var(--accent-teal); color: #000; border-color: var(--accent-teal); }
+
+.help-card {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  background: var(--surface);
+  border: 1px solid var(--accent-teal);
+  border-radius: 5px;
+  padding: 10px 12px;
+  font-size: 10px;
+  color: var(--text);
+  line-height: 1.55;
+  max-width: 320px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+.help-card.open { display: block; }
+
+/* ══ TABLE COLUMN STYLES ══ */
+.ind-name-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-width: 160px;
+}
+.cell-prev {
+  color: var(--text-dim);
+  font-size: 9px;
+  text-align: center;
+  min-width: 52px;
+}
+.cell-surprise {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 52px;
+}
+.cell-surprise.pos { color: var(--accent-green); }
+.cell-surprise.neg { color: var(--accent-red); }
+.cell-surprise.zero { color: var(--text-dim); }
+.cell-auto {
+  color: var(--accent-teal);
+  font-size: 10px;
+  text-align: center;
+}
+
+/* ══ WEIGHT SLIDERS ══ */
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+}
+.weight-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+.weight-slider {
+  flex: 1;
+  height: 3px;
+  accent-color: var(--accent-teal);
+  cursor: pointer;
+}
+.weight-slider:disabled {
+  opacity: .4;
+  cursor: default;
+}
+.weight-val {
+  font-size: 9px;
+  color: var(--accent-teal);
+  width: 28px;
+  text-align: right;
+  font-family: 'Share Tech Mono', monospace;
+}
+.weight-corr {
+  font-size: 8px;
+  color: var(--text-dim);
+  width: 36px;
+  text-align: right;
+}
+
+/* ══ RELEASE CYCLE INDICATOR ══ */
+tr.cycle-reset td.date-input-cell {
+  border-left: 2px solid var(--accent-amber) !important;
+}
+
 /* ══ RESET ══ */
 *{margin:0;padding:0;box-sizing:border-box;}
 
@@ -1819,6 +1931,7 @@ body {
       <option value="EURJPY">EURJPY</option>
       <option value="GBPJPY">GBPJPY</option>
     </select>
+    <button onclick="openModal('add-pair-modal')" title="Добавить пару" style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:2px 7px;font-size:9px;color:var(--text-muted);cursor:pointer;">+ Пара</button>
 
     <span class="sep">|</span>
 
@@ -2429,10 +2542,13 @@ body {
       </div>
     </div>
     <div class="blk-gear-section">
-      <div class="blk-gear-title">Отображение колонок</div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" checked> Показывать пустые строки
-      </label>
+      <div class="blk-gear-title">Строки</div>
+      <div id="row-vis-3" style="display:grid;gap:3px;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('m-cbrate',this.checked)"> CB Rate</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('m-ratediff',this.checked)"> Rate Diff</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('m-cbdec',this.checked)"> CB Decision</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('m-mktexp',this.checked)"> Market Exp</label>
+      </div>
     </div>
     <div class="blk-gear-section" style="border-top:1px solid var(--border2);padding-top:6px;">
       <button onclick="resetBlockScope('3')" style="background:transparent;border:none;font-size:9px;color:var(--accent-teal);cursor:pointer;">Сбросить к глобальному ↺</button>
@@ -2443,65 +2559,95 @@ body {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Показатель EN/RU</th>
+            <th>Показатель</th>
             <th><span class="pair-label-base" id="m-base">БАЗ</span></th>
             <th><span class="pair-label-quote" id="m-quote">КОТ</span></th>
-            <th>Есть</th>
-            <th>Ждут</th>
+            <th>Пред</th>
+            <th>Консенсус</th>
             <th>Факт</th>
-            <th>ВЕКТОР</th>
+            <th>Сюрприз</th>
             <th>Дата релиза</th>
             <th>●</th>
           </tr>
         </thead>
         <tbody id="monetary-tbody">
-          <tr class="row-neut">
-            <td>CB Rate / Ставка ЦБ</td>
+
+          <tr data-row="m-cbrate" class="row-neut">
+            <td class="ind-name-cell">
+              CB Rate / Ставка ЦБ
+              <button class="help-btn" onclick="showHelp(event,'h-cbrate')">?</button>
+              <div class="help-card" id="h-cbrate">
+                <b>CB Rate — Ставка центрального банка</b><br>
+                Ключевая процентная ставка ЦБ. Чем выше ставка базовой валюты по сравнению с котируемой — тем сильнее давление вверх на пару. Повышение ставки обычно поддерживает валюту, снижение — давит.
+              </div>
+            </td>
             <td><input class="cell-input" id="m-base-cbrate" placeholder="—" oninput="onManualInput(this,'m-base-cbrate')"></td>
-            <td><input class="cell-input" id="m-quote-cbrate" placeholder="—" oninput="onManualInput(this,'m-quote-cbrate')"></td>
-            <td id="m-have-cbrate">—</td>
-            <td><input class="cell-input" id="m-exp-cbrate" placeholder="—" oninput="onManualInput(this,'m-exp-cbrate')"></td>
-            <td><input class="cell-input" id="m-fact-cbrate" placeholder="—" oninput="onManualInput(this,'m-fact-cbrate')"></td>
-            <td id="m-vec-cbrate"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="m-date-cbrate" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'m-date-cbrate')"></td>
+            <td><input class="cell-input" id="m-quote-cbrate" placeholder="—" oninput="onManualInput(this,'m-quote-cbrate');calcBondDerived()"></td>
+            <td id="m-prev-cbrate" class="cell-prev">—</td>
+            <td><input class="cell-input" id="m-cons-cbrate" placeholder="—" oninput="onManualInput(this,'m-cons-cbrate')"></td>
+            <td><input class="cell-input" id="m-fact-cbrate" placeholder="—" oninput="onManualInput(this,'m-fact-cbrate');calcSurprise('m','cbrate')"></td>
+            <td id="m-surp-cbrate" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="m-date-cbrate" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'m-date-cbrate');checkReleaseCycle('m','cbrate')"></td>
             <td><span class="src-dot" id="m-src-cbrate">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Rate Diff / Дифференциал</td>
-            <td colspan="2"></td>
-            <td id="m-have-ratediff">—</td>
+          <tr data-row="m-ratediff" class="row-neut">
+            <td class="ind-name-cell">
+              Rate Diff / Дифференциал
+              <button class="help-btn" onclick="showHelp(event,'h-ratediff')">?</button>
+              <div class="help-card" id="h-ratediff">
+                <b>Rate Differential — Дифференциал ставок</b><br>
+                Разница между ставками двух ЦБ (Баз − Кот). Положительный дифференциал в пользу базовой валюты исторически поддерживает пару. Рынок реагирует не на уровень, а на изменение дифференциала.
+              </div>
+            </td>
+            <td colspan="2" style="text-align:center;color:var(--text-dim);font-size:9px;">авто</td>
+            <td id="m-prev-ratediff" class="cell-prev">—</td>
             <td></td>
-            <td id="m-fact-ratediff">—</td>
-            <td id="m-vec-ratediff"><span class="vec-neut">→</span></td>
+            <td id="m-fact-ratediff" class="cell-auto">—</td>
+            <td id="m-surp-ratediff" class="cell-surprise">—</td>
             <td></td>
             <td><span class="src-dot">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>CB Decision / Решение ЦБ<span class="sched-coef">×1.6</span></td>
+          <tr data-row="m-cbdec" class="row-neut">
+            <td class="ind-name-cell">
+              CB Decision / Решение ЦБ<span class="sched-coef">×1.6</span>
+              <button class="help-btn" onclick="showHelp(event,'h-cbdec')">?</button>
+              <div class="help-card" id="h-cbdec">
+                <b>CB Decision — Решение центрального банка</b><br>
+                Итог заседания ЦБ: повышение, снижение или удержание ставки. Имеет коэффициент ×1.6 из-за высокой рыночной значимости. Риторика протокола (hawkish/dovish) влияет не меньше самого решения.
+              </div>
+            </td>
             <td><input class="cell-input" id="m-base-cbdec" placeholder="—" oninput="onManualInput(this,'m-base-cbdec')"></td>
             <td><input class="cell-input" id="m-quote-cbdec" placeholder="—" oninput="onManualInput(this,'m-quote-cbdec')"></td>
-            <td id="m-have-cbdec">—</td>
-            <td><input class="cell-input" id="m-exp-cbdec" placeholder="—" oninput="onManualInput(this,'m-exp-cbdec')"></td>
-            <td><input class="cell-input" id="m-fact-cbdec" placeholder="—" oninput="onManualInput(this,'m-fact-cbdec')"></td>
-            <td id="m-vec-cbdec"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="m-date-cbdec" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'m-date-cbdec')"></td>
+            <td id="m-prev-cbdec" class="cell-prev">—</td>
+            <td><input class="cell-input" id="m-cons-cbdec" placeholder="—" oninput="onManualInput(this,'m-cons-cbdec')"></td>
+            <td><input class="cell-input" id="m-fact-cbdec" placeholder="—" oninput="onManualInput(this,'m-fact-cbdec');calcSurprise('m','cbdec')"></td>
+            <td id="m-surp-cbdec" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="m-date-cbdec" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'m-date-cbdec');checkReleaseCycle('m','cbdec')"></td>
             <td><span class="src-dot" id="m-src-cbdec">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Market Expectations / Ожидания рынка</td>
+          <tr data-row="m-mktexp" class="row-neut">
+            <td class="ind-name-cell">
+              Market Expectations / Ожидания рынка
+              <button class="help-btn" onclick="showHelp(event,'h-mktexp')">?</button>
+              <div class="help-card" id="h-mktexp">
+                <b>Market Expectations — Рыночные ожидания</b><br>
+                Вероятность изменения ставки, заложенная в фьючерсы (OIS, Fed Funds Futures). Отражает коллективный прогноз рынка. Резкое смещение ожиданий вызывает волатильность независимо от фактического решения ЦБ.
+              </div>
+            </td>
             <td><input class="cell-input" id="m-base-mktexp" placeholder="—" oninput="onManualInput(this,'m-base-mktexp')"></td>
             <td><input class="cell-input" id="m-quote-mktexp" placeholder="—" oninput="onManualInput(this,'m-quote-mktexp')"></td>
-            <td id="m-have-mktexp">—</td>
-            <td><input class="cell-input" id="m-exp-mktexp" placeholder="—" oninput="onManualInput(this,'m-exp-mktexp')"></td>
-            <td><input class="cell-input" id="m-fact-mktexp" placeholder="—" oninput="onManualInput(this,'m-fact-mktexp')"></td>
-            <td id="m-vec-mktexp"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="m-date-mktexp" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'m-date-mktexp')"></td>
+            <td id="m-prev-mktexp" class="cell-prev">—</td>
+            <td><input class="cell-input" id="m-cons-mktexp" placeholder="—" oninput="onManualInput(this,'m-cons-mktexp')"></td>
+            <td><input class="cell-input" id="m-fact-mktexp" placeholder="—" oninput="onManualInput(this,'m-fact-mktexp');calcSurprise('m','mktexp')"></td>
+            <td id="m-surp-mktexp" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="m-date-mktexp" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'m-date-mktexp');checkReleaseCycle('m','mktexp')"></td>
             <td><span class="src-dot" id="m-src-mktexp">⚫</span></td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
+
 
   <!-- ══ БЛОК 4 — ECONOMY ══ -->
   <div class="data-block" id="block-4">
@@ -2535,10 +2681,17 @@ body {
       </div>
     </div>
     <div class="blk-gear-section">
-      <div class="blk-gear-title">Отображение колонок</div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" checked> Показывать пустые строки
-      </label>
+      <div class="blk-gear-title">Строки</div>
+      <div style="display:grid;gap:3px;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-cpi',this.checked)"> CPI YoY</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-corecpi',this.checked)"> Core CPI</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-gdp',this.checked)"> GDP QoQ</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-nfp',this.checked)"> NFP</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-unemp',this.checked)"> Unemployment</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-pmimfg',this.checked)"> PMI Mfg</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-pmisvc',this.checked)"> PMI Svc</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;"><input type="checkbox" checked onchange="toggleRow('e-ahe',this.checked)"> AHE</label>
+      </div>
     </div>
     <div class="blk-gear-section" style="border-top:1px solid var(--border2);padding-top:6px;">
       <button onclick="resetBlockScope('4')" style="background:transparent;border:none;font-size:9px;color:var(--accent-teal);cursor:pointer;">Сбросить к глобальному ↺</button>
@@ -2549,104 +2702,128 @@ body {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Показатель EN/RU</th>
+            <th>Показатель</th>
             <th><span class="pair-label-base" id="e-base">БАЗ</span></th>
             <th><span class="pair-label-quote" id="e-quote">КОТ</span></th>
-            <th>Есть</th>
-            <th>Ждут</th>
+            <th>Пред</th>
+            <th>Консенсус</th>
             <th>Факт</th>
-            <th>ВЕКТОР</th>
+            <th>Сюрприз</th>
             <th>Дата релиза</th>
             <th>●</th>
           </tr>
         </thead>
         <tbody id="economy-tbody">
-          <tr class="row-neut">
-            <td>CPI YoY / ИПЦ г/г<span class="sched-coef">×1.5</span></td>
+          <tr data-row="e-cpi" class="row-neut">
+            <td class="ind-name-cell">CPI YoY / ИПЦ г/г<span class="sched-coef">×1.5</span>
+              <button class="help-btn" onclick="showHelp(event,'h-cpi')">?</button>
+              <div class="help-card" id="h-cpi"><b>CPI YoY — Инфляция (год к году)</b><br>Главный индикатор инфляции. Высокая инфляция → ЦБ повышает ставки → укрепление валюты. Выход выше консенсуса — бычий сигнал. CPIAUCSL в FRED.</div>
+            </td>
             <td><input class="cell-input" id="e-base-cpi" placeholder="—" oninput="onManualInput(this,'e-base-cpi')"></td>
-            <td><input class="cell-input" id="e-quote-cpi" placeholder="—" oninput="onManualInput(this,'e-quote-cpi')"></td>
-            <td id="e-have-cpi">—</td>
-            <td><input class="cell-input" id="e-exp-cpi" placeholder="—" oninput="onManualInput(this,'e-exp-cpi')"></td>
-            <td><input class="cell-input" id="e-fact-cpi" placeholder="—" oninput="onManualInput(this,'e-fact-cpi')"></td>
-            <td id="e-vec-cpi"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-cpi" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-cpi')"></td>
+            <td><input class="cell-input" id="e-quote-cpi" placeholder="—" oninput="onManualInput(this,'e-quote-cpi');calcBondDerived()"></td>
+            <td id="e-prev-cpi" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-cpi" placeholder="—" oninput="onManualInput(this,'e-cons-cpi')"></td>
+            <td><input class="cell-input" id="e-fact-cpi" placeholder="—" oninput="onManualInput(this,'e-fact-cpi');calcSurprise('e','cpi')"></td>
+            <td id="e-surp-cpi" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-cpi" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-cpi');checkReleaseCycle('e','cpi')"></td>
             <td><span class="src-dot" id="e-src-cpi">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Core CPI / Базовый ИПЦ</td>
+          <tr data-row="e-corecpi" class="row-neut">
+            <td class="ind-name-cell">Core CPI / Базовый ИПЦ
+              <button class="help-btn" onclick="showHelp(event,'h-corecpi')">?</button>
+              <div class="help-card" id="h-corecpi"><b>Core CPI — Базовая инфляция</b><br>CPI без еды и энергии. Более устойчивый тренд. ФРС и ЕЦБ ориентируются прежде всего на базовый CPI при решениях по ставке.</div>
+            </td>
             <td><input class="cell-input" id="e-base-corecpi" placeholder="—" oninput="onManualInput(this,'e-base-corecpi')"></td>
             <td><input class="cell-input" id="e-quote-corecpi" placeholder="—" oninput="onManualInput(this,'e-quote-corecpi')"></td>
-            <td id="e-have-corecpi">—</td>
-            <td><input class="cell-input" id="e-exp-corecpi" placeholder="—" oninput="onManualInput(this,'e-exp-corecpi')"></td>
-            <td><input class="cell-input" id="e-fact-corecpi" placeholder="—" oninput="onManualInput(this,'e-fact-corecpi')"></td>
-            <td id="e-vec-corecpi"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-corecpi" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-corecpi')"></td>
+            <td id="e-prev-corecpi" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-corecpi" placeholder="—" oninput="onManualInput(this,'e-cons-corecpi')"></td>
+            <td><input class="cell-input" id="e-fact-corecpi" placeholder="—" oninput="onManualInput(this,'e-fact-corecpi');calcSurprise('e','corecpi')"></td>
+            <td id="e-surp-corecpi" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-corecpi" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-corecpi');checkReleaseCycle('e','corecpi')"></td>
             <td><span class="src-dot" id="e-src-corecpi">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>GDP QoQ / ВВП кв/кв<span class="sched-coef">×1.3</span></td>
+          <tr data-row="e-gdp" class="row-neut">
+            <td class="ind-name-cell">GDP QoQ / ВВП кв/кв<span class="sched-coef">×1.3</span>
+              <button class="help-btn" onclick="showHelp(event,'h-gdp')">?</button>
+              <div class="help-card" id="h-gdp"><b>GDP QoQ — Рост ВВП (квартал к кварталу)</b><br>Показатель экономического роста. Выход выше ожиданий поддерживает валюту. Выходит раз в квартал (первая, вторая и финальная оценки). GDP в FRED.</div>
+            </td>
             <td><input class="cell-input" id="e-base-gdp" placeholder="—" oninput="onManualInput(this,'e-base-gdp')"></td>
             <td><input class="cell-input" id="e-quote-gdp" placeholder="—" oninput="onManualInput(this,'e-quote-gdp')"></td>
-            <td id="e-have-gdp">—</td>
-            <td><input class="cell-input" id="e-exp-gdp" placeholder="—" oninput="onManualInput(this,'e-exp-gdp')"></td>
-            <td><input class="cell-input" id="e-fact-gdp" placeholder="—" oninput="onManualInput(this,'e-fact-gdp')"></td>
-            <td id="e-vec-gdp"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-gdp" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-gdp')"></td>
+            <td id="e-prev-gdp" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-gdp" placeholder="—" oninput="onManualInput(this,'e-cons-gdp')"></td>
+            <td><input class="cell-input" id="e-fact-gdp" placeholder="—" oninput="onManualInput(this,'e-fact-gdp');calcSurprise('e','gdp')"></td>
+            <td id="e-surp-gdp" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-gdp" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-gdp');checkReleaseCycle('e','gdp')"></td>
             <td><span class="src-dot" id="e-src-gdp">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>NFP / Занятость<span class="sched-coef">×1.4</span></td>
+          <tr data-row="e-nfp" class="row-neut">
+            <td class="ind-name-cell">NFP / Занятость<span class="sched-coef">×1.4</span>
+              <button class="help-btn" onclick="showHelp(event,'h-nfp')">?</button>
+              <div class="help-card" id="h-nfp"><b>NFP — Non-Farm Payrolls</b><br>Ключевой индикатор рынка труда США. Первая пятница месяца. Выход выше консенсуса → ФРС держит ставки → бычий USD. PAYEMS в FRED.</div>
+            </td>
             <td><input class="cell-input" id="e-base-nfp" placeholder="—" oninput="onManualInput(this,'e-base-nfp')"></td>
             <td><input class="cell-input" id="e-quote-nfp" placeholder="—" oninput="onManualInput(this,'e-quote-nfp')"></td>
-            <td id="e-have-nfp">—</td>
-            <td><input class="cell-input" id="e-exp-nfp" placeholder="—" oninput="onManualInput(this,'e-exp-nfp')"></td>
-            <td><input class="cell-input" id="e-fact-nfp" placeholder="—" oninput="onManualInput(this,'e-fact-nfp')"></td>
-            <td id="e-vec-nfp"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-nfp" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-nfp')"></td>
+            <td id="e-prev-nfp" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-nfp" placeholder="—" oninput="onManualInput(this,'e-cons-nfp')"></td>
+            <td><input class="cell-input" id="e-fact-nfp" placeholder="—" oninput="onManualInput(this,'e-fact-nfp');calcSurprise('e','nfp')"></td>
+            <td id="e-surp-nfp" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-nfp" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-nfp');checkReleaseCycle('e','nfp')"></td>
             <td><span class="src-dot" id="e-src-nfp">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Unemployment / Безработица<span class="sched-coef">×1.15</span></td>
+          <tr data-row="e-unemp" class="row-neut">
+            <td class="ind-name-cell">Unemployment / Безработица<span class="sched-coef">×1.15</span>
+              <button class="help-btn" onclick="showHelp(event,'h-unemp')">?</button>
+              <div class="help-card" id="h-unemp"><b>Unemployment Rate — Уровень безработицы</b><br>Обратный индикатор занятости. Снижение ниже консенсуса — бычий сигнал. Запаздывающий индикатор. UNRATE в FRED.</div>
+            </td>
             <td><input class="cell-input" id="e-base-unemp" placeholder="—" oninput="onManualInput(this,'e-base-unemp')"></td>
             <td><input class="cell-input" id="e-quote-unemp" placeholder="—" oninput="onManualInput(this,'e-quote-unemp')"></td>
-            <td id="e-have-unemp">—</td>
-            <td><input class="cell-input" id="e-exp-unemp" placeholder="—" oninput="onManualInput(this,'e-exp-unemp')"></td>
-            <td><input class="cell-input" id="e-fact-unemp" placeholder="—" oninput="onManualInput(this,'e-fact-unemp')"></td>
-            <td id="e-vec-unemp"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-unemp" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-unemp')"></td>
+            <td id="e-prev-unemp" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-unemp" placeholder="—" oninput="onManualInput(this,'e-cons-unemp')"></td>
+            <td><input class="cell-input" id="e-fact-unemp" placeholder="—" oninput="onManualInput(this,'e-fact-unemp');calcSurprise('e','unemp')"></td>
+            <td id="e-surp-unemp" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-unemp" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-unemp');checkReleaseCycle('e','unemp')"></td>
             <td><span class="src-dot" id="e-src-unemp">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>PMI Mfg / Производств. PMI<span class="sched-coef">×1.25</span></td>
+          <tr data-row="e-pmimfg" class="row-neut">
+            <td class="ind-name-cell">PMI Mfg / Производств. PMI<span class="sched-coef">×1.25</span>
+              <button class="help-btn" onclick="showHelp(event,'h-pmimfg')">?</button>
+              <div class="help-card" id="h-pmimfg"><b>Manufacturing PMI</b><br>>50 = рост, <50 = сжатие. Опережающий индикатор. ISM Mfg для США.</div>
+            </td>
             <td><input class="cell-input" id="e-base-pmimfg" placeholder="—" oninput="onManualInput(this,'e-base-pmimfg')"></td>
             <td><input class="cell-input" id="e-quote-pmimfg" placeholder="—" oninput="onManualInput(this,'e-quote-pmimfg')"></td>
-            <td id="e-have-pmimfg">—</td>
-            <td><input class="cell-input" id="e-exp-pmimfg" placeholder="—" oninput="onManualInput(this,'e-exp-pmimfg')"></td>
-            <td><input class="cell-input" id="e-fact-pmimfg" placeholder="—" oninput="onManualInput(this,'e-fact-pmimfg')"></td>
-            <td id="e-vec-pmimfg"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-pmimfg" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-pmimfg')"></td>
+            <td id="e-prev-pmimfg" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-pmimfg" placeholder="—" oninput="onManualInput(this,'e-cons-pmimfg')"></td>
+            <td><input class="cell-input" id="e-fact-pmimfg" placeholder="—" oninput="onManualInput(this,'e-fact-pmimfg');calcSurprise('e','pmimfg')"></td>
+            <td id="e-surp-pmimfg" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-pmimfg" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-pmimfg');checkReleaseCycle('e','pmimfg')"></td>
             <td><span class="src-dot" id="e-src-pmimfg">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>PMI Svc / Сфера услуг PMI<span class="sched-coef">×1.25</span></td>
+          <tr data-row="e-pmisvc" class="row-neut">
+            <td class="ind-name-cell">PMI Svc / Сфера услуг PMI<span class="sched-coef">×1.25</span>
+              <button class="help-btn" onclick="showHelp(event,'h-pmisvc')">?</button>
+              <div class="help-card" id="h-pmisvc"><b>Services PMI</b><br>Деловая активность в секторе услуг (70%+ ВВП). ISM Services для США. Сильнее влияет на валюту, чем производственный PMI.</div>
+            </td>
             <td><input class="cell-input" id="e-base-pmisvc" placeholder="—" oninput="onManualInput(this,'e-base-pmisvc')"></td>
             <td><input class="cell-input" id="e-quote-pmisvc" placeholder="—" oninput="onManualInput(this,'e-quote-pmisvc')"></td>
-            <td id="e-have-pmisvc">—</td>
-            <td><input class="cell-input" id="e-exp-pmisvc" placeholder="—" oninput="onManualInput(this,'e-exp-pmisvc')"></td>
-            <td><input class="cell-input" id="e-fact-pmisvc" placeholder="—" oninput="onManualInput(this,'e-fact-pmisvc')"></td>
-            <td id="e-vec-pmisvc"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-pmisvc" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-pmisvc')"></td>
+            <td id="e-prev-pmisvc" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-pmisvc" placeholder="—" oninput="onManualInput(this,'e-cons-pmisvc')"></td>
+            <td><input class="cell-input" id="e-fact-pmisvc" placeholder="—" oninput="onManualInput(this,'e-fact-pmisvc');calcSurprise('e','pmisvc')"></td>
+            <td id="e-surp-pmisvc" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-pmisvc" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-pmisvc');checkReleaseCycle('e','pmisvc')"></td>
             <td><span class="src-dot" id="e-src-pmisvc">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>AHE / Ср. почасовой заработок<span class="sched-coef">×1.1</span></td>
+          <tr data-row="e-ahe" class="row-neut">
+            <td class="ind-name-cell">AHE / Ср. почасовой заработок<span class="sched-coef">×1.1</span>
+              <button class="help-btn" onclick="showHelp(event,'h-ahe')">?</button>
+              <div class="help-card" id="h-ahe"><b>Average Hourly Earnings</b><br>Выходит с NFP. Рост зарплат → инфляция → жёсткая ДКП → поддержка валюты.</div>
+            </td>
             <td><input class="cell-input" id="e-base-ahe" placeholder="—" oninput="onManualInput(this,'e-base-ahe')"></td>
             <td><input class="cell-input" id="e-quote-ahe" placeholder="—" oninput="onManualInput(this,'e-quote-ahe')"></td>
-            <td id="e-have-ahe">—</td>
-            <td><input class="cell-input" id="e-exp-ahe" placeholder="—" oninput="onManualInput(this,'e-exp-ahe')"></td>
-            <td><input class="cell-input" id="e-fact-ahe" placeholder="—" oninput="onManualInput(this,'e-fact-ahe')"></td>
-            <td id="e-vec-ahe"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="e-date-ahe" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'e-date-ahe')"></td>
+            <td id="e-prev-ahe" class="cell-prev">—</td>
+            <td><input class="cell-input" id="e-cons-ahe" placeholder="—" oninput="onManualInput(this,'e-cons-ahe')"></td>
+            <td><input class="cell-input" id="e-fact-ahe" placeholder="—" oninput="onManualInput(this,'e-fact-ahe');calcSurprise('e','ahe')"></td>
+            <td id="e-surp-ahe" class="cell-surprise">—</td>
+            <td><input class="cell-input date-input" id="e-date-ahe" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'e-date-ahe');checkReleaseCycle('e','ahe')"></td>
             <td><span class="src-dot" id="e-src-ahe">⚫</span></td>
           </tr>
         </tbody>
@@ -2685,12 +2862,6 @@ body {
         </div>
       </div>
     </div>
-    <div class="blk-gear-section">
-      <div class="blk-gear-title">Отображение колонок</div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" checked> Показывать пустые строки
-      </label>
-    </div>
     <div class="blk-gear-section" style="border-top:1px solid var(--border2);padding-top:6px;">
       <button onclick="resetBlockScope('5')" style="background:transparent;border:none;font-size:9px;color:var(--accent-teal);cursor:pointer;">Сбросить к глобальному ↺</button>
     </div>
@@ -2700,67 +2871,70 @@ body {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Показатель EN/RU</th>
+            <th>Показатель</th>
             <th><span class="pair-label-base" id="b-base">БАЗ</span></th>
             <th><span class="pair-label-quote" id="b-quote">КОТ</span></th>
-            <th>Есть</th>
-            <th>Ждут</th>
-            <th>Факт</th>
-            <th>ВЕКТОР</th>
+            <th>Пред</th>
+            <th>Факт (FRED)</th>
             <th>Дата</th>
             <th>●</th>
           </tr>
         </thead>
         <tbody id="bond-tbody">
-          <tr class="row-neut">
-            <td>10Y Yield / Доходность 10Y</td>
-            <td><input class="cell-input" id="bo-base-y10" placeholder="—" oninput="onManualInput(this,'bo-base-y10')"></td>
-            <td><input class="cell-input" id="bo-quote-y10" placeholder="—" oninput="onManualInput(this,'bo-quote-y10')"></td>
-            <td id="bo-have-y10">—</td>
-            <td><input class="cell-input" id="bo-exp-y10" placeholder="—"></td>
-            <td><input class="cell-input" id="bo-fact-y10" placeholder="—" oninput="onManualInput(this,'bo-fact-y10')"></td>
-            <td id="bo-vec-y10"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="bo-date-y10" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'bo-date-y10')"></td>
+          <tr data-row="bo-y10" class="row-neut">
+            <td class="ind-name-cell">10Y Yield / Доходность 10Y
+              <button class="help-btn" onclick="showHelp(event,'h-y10')">?</button>
+              <div class="help-card" id="h-y10"><b>10Y Treasury Yield</b><br>Эталонная «безрисковая» ставка. Рост доходностей → капитал притекает → валюта крепнет. Обновляется ежедневно через FRED (DGS10).</div>
+            </td>
+            <td><input class="cell-input" id="bo-base-y10" placeholder="—" oninput="onManualInput(this,'bo-base-y10');calcBondDerived()"></td>
+            <td><input class="cell-input" id="bo-quote-y10" placeholder="—" oninput="onManualInput(this,'bo-quote-y10');calcBondDerived()"></td>
+            <td id="bo-prev-y10" class="cell-prev">—</td>
+            <td id="bo-fact-y10" class="cell-auto">—</td>
+            <td id="bo-date-y10" style="font-size:9px;color:var(--text-dim);">—</td>
             <td><span class="src-dot" id="bo-src-y10">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>10Y Spread / Дифференциал 10Y</td>
-            <td colspan="2"></td>
-            <td id="bo-have-10ydiff">—</td>
-            <td></td>
-            <td id="bo-fact-10ydiff">—</td>
-            <td id="bo-vec-10ydiff"><span class="vec-neut">→</span></td>
+          <tr data-row="bo-10ydiff" class="row-neut">
+            <td class="ind-name-cell">10Y Spread / Дифференциал 10Y
+              <button class="help-btn" onclick="showHelp(event,'h-10ydiff')">?</button>
+              <div class="help-card" id="h-10ydiff"><b>10Y Yield Spread</b><br>Разница доходностей 10Y (Баз − Кот). Положительный спред поддерживает базовую валюту через carry trade.</div>
+            </td>
+            <td colspan="2" style="text-align:center;color:var(--text-dim);font-size:9px;">авто</td>
+            <td id="bo-prev-10ydiff" class="cell-prev">—</td>
+            <td id="bo-fact-10ydiff" class="cell-auto">—</td>
             <td></td>
             <td><span class="src-dot">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>2Y Yield / Доходность 2Y</td>
-            <td><input class="cell-input" id="bo-base-y2" placeholder="—" oninput="onManualInput(this,'bo-base-y2')"></td>
-            <td><input class="cell-input" id="bo-quote-y2" placeholder="—" oninput="onManualInput(this,'bo-quote-y2')"></td>
-            <td id="bo-have-y2">—</td>
-            <td></td>
-            <td><input class="cell-input" id="bo-fact-y2" placeholder="—" oninput="onManualInput(this,'bo-fact-y2')"></td>
-            <td id="bo-vec-y2"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="bo-date-y2" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'bo-date-y2')"></td>
+          <tr data-row="bo-y2" class="row-neut">
+            <td class="ind-name-cell">2Y Yield / Доходность 2Y
+              <button class="help-btn" onclick="showHelp(event,'h-y2')">?</button>
+              <div class="help-card" id="h-y2"><b>2Y Treasury Yield</b><br>Наиболее чувствительна к ожиданиям по ставке ЦБ. Опережает решения ФРС/ЕЦБ. DGS2 в FRED.</div>
+            </td>
+            <td><input class="cell-input" id="bo-base-y2" placeholder="—" oninput="onManualInput(this,'bo-base-y2');calcBondDerived()"></td>
+            <td><input class="cell-input" id="bo-quote-y2" placeholder="—" oninput="onManualInput(this,'bo-quote-y2');calcBondDerived()"></td>
+            <td id="bo-prev-y2" class="cell-prev">—</td>
+            <td id="bo-fact-y2" class="cell-auto">—</td>
+            <td id="bo-date-y2" style="font-size:9px;color:var(--text-dim);">—</td>
             <td><span class="src-dot" id="bo-src-y2">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Real Rate / Реальная ставка</td>
-            <td colspan="2"></td>
-            <td id="bo-have-realrate">—</td>
-            <td></td>
-            <td id="bo-fact-realrate">—</td>
-            <td id="bo-vec-realrate"><span class="vec-neut">→</span></td>
+          <tr data-row="bo-realrate" class="row-neut">
+            <td class="ind-name-cell">Real Rate / Реальная ставка
+              <button class="help-btn" onclick="showHelp(event,'h-realrate')">?</button>
+              <div class="help-card" id="h-realrate"><b>Real Interest Rate</b><br>Номинальная ставка ЦБ минус инфляция CPI. Рост реальной ставки = сильный бычий сигнал для валюты.</div>
+            </td>
+            <td colspan="2" style="text-align:center;color:var(--text-dim);font-size:9px;">авто</td>
+            <td id="bo-prev-realrate" class="cell-prev">—</td>
+            <td id="bo-fact-realrate" class="cell-auto">—</td>
             <td></td>
             <td><span class="src-dot">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>Yield Curve / Кривая доходности</td>
-            <td colspan="2"></td>
-            <td id="bo-have-yieldcurve">—</td>
-            <td></td>
-            <td id="bo-fact-yieldcurve">—</td>
-            <td id="bo-vec-yieldcurve"><span class="vec-neut">→</span></td>
+          <tr data-row="bo-yieldcurve" class="row-neut">
+            <td class="ind-name-cell">Yield Curve / Кривая доходности
+              <button class="help-btn" onclick="showHelp(event,'h-yieldcurve')">?</button>
+              <div class="help-card" id="h-yieldcurve"><b>Yield Curve (2Y10Y)</b><br>10Y − 2Y. Инверсия = риск рецессии → медвежий долгосрочно. Авто = 10Y − 2Y.</div>
+            </td>
+            <td colspan="2" style="text-align:center;color:var(--text-dim);font-size:9px;">авто</td>
+            <td id="bo-prev-yieldcurve" class="cell-prev">—</td>
+            <td id="bo-fact-yieldcurve" class="cell-auto">—</td>
             <td></td>
             <td><span class="src-dot">⚫</span></td>
           </tr>
@@ -2800,12 +2974,6 @@ body {
         </div>
       </div>
     </div>
-    <div class="blk-gear-section">
-      <div class="blk-gear-title">Отображение колонок</div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" checked> Показывать пустые строки
-      </label>
-    </div>
     <div class="blk-gear-section" style="border-top:1px solid var(--border2);padding-top:6px;">
       <button onclick="resetBlockScope('6')" style="background:transparent;border:none;font-size:9px;color:var(--accent-teal);cursor:pointer;">Сбросить к глобальному ↺</button>
     </div>
@@ -2818,11 +2986,10 @@ body {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Показатель EN/RU</th>
+            <th>Показатель</th>
             <th><span class="pair-label-base" id="cot-base">БАЗ</span></th>
             <th><span class="pair-label-quote" id="cot-quote">КОТ</span></th>
-            <th>Есть</th>
-            <th>Ждут</th>
+            <th>Пред</th>
             <th>Факт</th>
             <th>ВЕКТОР</th>
             <th>Дата данных</th>
@@ -2830,33 +2997,39 @@ body {
           </tr>
         </thead>
         <tbody id="cot-tbody">
-          <tr class="row-manual">
-            <td>Non-Commercial Net / Нетто (крупные игроки)</td>
+          <tr data-row="cot-nc" class="row-manual">
+            <td class="ind-name-cell">Non-Commercial Net / Нетто (крупные игроки)
+              <button class="help-btn" onclick="showHelp(event,'h-cotnc')">?</button>
+              <div class="help-card" id="h-cotnc"><b>Non-Commercial Net</b><br>Нетто-позиция хедж-фондов (CFTC). Рост нетто → накопление лонгов → бычий сигнал. Пятница 15:30 ET.</div>
+            </td>
             <td><input class="cell-input manual" id="cot-base-nc" placeholder="—" oninput="onManualInput(this,'cot-base-nc')"></td>
             <td><input class="cell-input manual" id="cot-quote-nc" placeholder="—" oninput="onManualInput(this,'cot-quote-nc')"></td>
-            <td id="cot-have-nc">—</td>
-            <td><input class="cell-input manual" id="cot-exp-nc" placeholder="—" oninput="onManualInput(this,'cot-exp-nc')"></td>
+            <td id="cot-prev-nc" class="cell-prev">—</td>
             <td><input class="cell-input manual" id="cot-fact-nc" placeholder="—" oninput="onManualInput(this,'cot-fact-nc')"></td>
             <td id="cot-vec-nc"><span class="vec-neut">→</span></td>
-            <td><input class="cell-input" id="cot-date-nc" placeholder="ДД.ММ.ГГГГ" style="width:90px;" oninput="onManualInput(this,'cot-date-nc')"></td>
+            <td><input class="cell-input date-input" id="cot-date-nc" placeholder="ДД.ММ.ГГГГ" oninput="onManualInput(this,'cot-date-nc')"></td>
             <td><span class="src-dot">🟤</span></td>
           </tr>
-          <tr class="row-manual">
-            <td>COT Index / Индекс COT</td>
-            <td colspan="2"></td>
-            <td id="cot-have-idx">—</td>
-            <td></td>
-            <td id="cot-fact-idx">—</td>
+          <tr data-row="cot-idx" class="row-manual">
+            <td class="ind-name-cell">COT Index / Индекс COT
+              <button class="help-btn" onclick="showHelp(event,'h-cotidx')">?</button>
+              <div class="help-card" id="h-cotidx"><b>COT Index</b><br>Нормированная нетто-позиция (0–100, за 3 года). >75 = экстремальный лонг (риск разворота). Контрарный индикатор.</div>
+            </td>
+            <td colspan="2" style="text-align:center;color:var(--text-dim);font-size:9px;">—</td>
+            <td id="cot-prev-idx" class="cell-prev">—</td>
+            <td id="cot-fact-idx" class="cell-auto">—</td>
             <td id="cot-vec-idx"><span class="vec-neut">→</span></td>
             <td></td>
             <td><span class="src-dot">🟤</span></td>
           </tr>
-          <tr class="row-manual">
-            <td>Change WoW / Изменение нед/нед</td>
+          <tr data-row="cot-chg" class="row-manual">
+            <td class="ind-name-cell">Change WoW / Изменение нед/нед
+              <button class="help-btn" onclick="showHelp(event,'h-cotchg')">?</button>
+              <div class="help-card" id="h-cotchg"><b>COT Weekly Change</b><br>Разница нетто-позиции текущей и прошлой недели. Ускорение роста — подтверждение тренда.</div>
+            </td>
             <td><input class="cell-input manual" id="cot-base-chg" placeholder="—" oninput="onManualInput(this,'cot-base-chg')"></td>
             <td><input class="cell-input manual" id="cot-quote-chg" placeholder="—" oninput="onManualInput(this,'cot-quote-chg')"></td>
-            <td id="cot-have-chg">—</td>
-            <td></td>
+            <td id="cot-prev-chg" class="cell-prev">—</td>
             <td><input class="cell-input manual" id="cot-fact-chg" placeholder="—" oninput="onManualInput(this,'cot-fact-chg')"></td>
             <td id="cot-vec-chg"><span class="vec-neut">→</span></td>
             <td></td>
@@ -2898,12 +3071,6 @@ body {
         </div>
       </div>
     </div>
-    <div class="blk-gear-section">
-      <div class="blk-gear-title">Отображение колонок</div>
-      <label style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" checked> Показывать пустые строки
-      </label>
-    </div>
     <div class="blk-gear-section" style="border-top:1px solid var(--border2);padding-top:6px;">
       <button onclick="resetBlockScope('7')" style="background:transparent;border:none;font-size:9px;color:var(--accent-teal);cursor:pointer;">Сбросить к глобальному ↺</button>
     </div>
@@ -2913,53 +3080,54 @@ body {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Показатель EN/RU</th>
-            <th>Есть</th>
-            <th>Ждут</th>
+            <th>Показатель</th>
+            <th>Пред</th>
             <th>Факт</th>
             <th>ВЕКТОР</th>
-            <th>Зоны <button class="info-btn" onclick="toggleInfoPopup('risk-zones')">ℹ</button></th>
+            <th>Зоны</th>
             <th>Дата</th>
             <th>●</th>
           </tr>
         </thead>
         <tbody id="risk-tbody">
-          <tr class="row-neut">
-            <td>VIX / Волатильность S&amp;P500</td>
-            <td id="risk-have-vix">—</td>
-            <td></td>
+          <tr data-row="risk-vix" class="row-neut">
+            <td class="ind-name-cell">VIX / Волатильность S&amp;P500
+              <button class="help-btn" onclick="showHelp(event,'h-vix')">?</button>
+              <div class="help-card" id="h-vix"><b>VIX — CBOE Volatility Index</b><br>&lt;15: риск-ON · 15–25: нормальная · 25–35: повышенная · &gt;35: кризис, риск-OFF<br>Рост VIX → бегство в безопасные валюты (USD, JPY, CHF).</div>
+            </td>
+            <td id="risk-prev-vix" class="cell-prev">—</td>
             <td><input class="cell-input" id="risk-fact-vix" placeholder="—" oninput="onManualInput(this,'risk-fact-vix')"></td>
             <td id="risk-vec-vix"><span class="vec-neut">→</span></td>
             <td style="font-size:9px;color:var(--text-dim);">&lt;15/15-25/25-35/&gt;35</td>
-            <td id="risk-date-vix">—</td>
+            <td id="risk-date-vix" style="font-size:9px;color:var(--text-dim);">—</td>
             <td><span class="src-dot" id="risk-src-vix">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>MOVE / Волатильность трежериз</td>
-            <td id="risk-have-move">—</td>
-            <td></td>
+          <tr data-row="risk-move" class="row-neut">
+            <td class="ind-name-cell">MOVE / Волатильность трежериз
+              <button class="help-btn" onclick="showHelp(event,'h-move')">?</button>
+              <div class="help-card" id="h-move"><b>MOVE Index</b><br>&lt;80: спокойно · 80–120: умеренная · &gt;120: высокая волатильность<br>Рост MOVE = нестабильность на рынке ставок.</div>
+            </td>
+            <td id="risk-prev-move" class="cell-prev">—</td>
             <td><input class="cell-input" id="risk-fact-move" placeholder="—" oninput="onManualInput(this,'risk-fact-move')"></td>
             <td id="risk-vec-move"><span class="vec-neut">→</span></td>
             <td style="font-size:9px;color:var(--text-dim);">&lt;80 / 80-120 / &gt;120</td>
-            <td id="risk-date-move">—</td>
+            <td id="risk-date-move" style="font-size:9px;color:var(--text-dim);">—</td>
             <td><span class="src-dot" id="risk-src-move">⚫</span></td>
           </tr>
-          <tr class="row-neut">
-            <td>CVOL / Опционная вол. пары</td>
-            <td id="risk-have-cvol">—</td>
-            <td></td>
+          <tr data-row="risk-cvol" class="row-neut">
+            <td class="ind-name-cell">CVOL / Опционная вол. пары
+              <button class="help-btn" onclick="showHelp(event,'h-cvol')">?</button>
+              <div class="help-card" id="h-cvol"><b>CVOL — Currency Implied Volatility</b><br>Подразумеваемая волатильность пары (1M ATM IV). Рост CVOL = рынок ожидает резкое движение.</div>
+            </td>
+            <td id="risk-prev-cvol" class="cell-prev">—</td>
             <td><input class="cell-input" id="risk-fact-cvol" placeholder="—" oninput="onManualInput(this,'risk-fact-cvol')"></td>
             <td id="risk-vec-cvol"><span class="vec-neut">→</span></td>
             <td style="font-size:9px;color:var(--text-dim);">Зависит от пары</td>
-            <td id="risk-date-cvol">—</td>
+            <td id="risk-date-cvol" style="font-size:9px;color:var(--text-dim);">—</td>
             <td><span class="src-dot" id="risk-src-cvol">⚫</span></td>
           </tr>
         </tbody>
       </table>
-      <div class="info-popup" id="risk-zones" style="position:relative;margin:0 14px 8px;">
-        <b>Зоны VIX:</b> &lt;15 низкая (риск-ON) · 15-25 нормальная · 25-35 повышенная · &gt;35 экстремальная (риск-OFF)<br>
-        <b>Зоны MOVE:</b> &lt;80 спокойно · 80-120 умеренно · &gt;120 напряжённо
-      </div>
     </div>
   </div>
 
@@ -3227,6 +3395,92 @@ body {
     </div><!-- /bottom-content -->
   </div><!-- /bottom-panel -->
 
+
+
+  <!-- ══ КАЛИБРАТОР ВЕСОВ ══ -->
+  <div class="data-block" id="block-calibrator">
+    <div class="block-header" onclick="toggleBlock('calibrator-body','calibrator-arrow','calibrator-gear')">
+      <span class="block-num">⚖</span>
+      <span class="block-title">Калибратор весов</span>
+      <span class="block-sub">Корреляция · равные · ручные слайдеры</span>
+      <div class="block-toggle">
+        <span id="calibrator-arrow">▾</span>
+      </div>
+    </div>
+    <div id="calibrator-body" class="block-body">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border2);">
+        <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;">Режим:</span>
+        <div class="scope-toggle" style="margin:0;">
+          <div class="scope-btn on" id="wm-equal"  onclick="setWeightMode('equal',this)">Равные</div>
+          <div class="scope-btn"   id="wm-corr"   onclick="setWeightMode('corr',this)">По корреляции</div>
+          <div class="scope-btn"   id="wm-manual" onclick="setWeightMode('manual',this)">Ручные</div>
+        </div>
+        <button id="btn-load-pair-history" onclick="loadActivePairHistory()" style="margin-left:auto;background:var(--accent-teal);border:none;border-radius:3px;padding:3px 10px;font-size:9px;color:#000;cursor:pointer;font-weight:600;">
+          Загрузить историю <span id="calib-pair-name">пары</span>
+        </button>
+        <span id="calib-hist-status" style="font-size:9px;color:var(--text-dim);">Нет данных</span>
+      </div>
+      <div id="wm-desc" style="padding:4px 14px;font-size:9px;color:var(--text-muted);background:rgba(76,146,153,.05);border-bottom:1px solid var(--border2);">
+        Режим «Равные» — все факторы имеют одинаковый вес 1. Простой старт без корреляционного анализа.
+      </div>
+      <div style="padding:10px 14px;">
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Веса факторов <span style="color:var(--accent-teal);font-size:8px;">(live-пересчёт индекса)</span></div>
+        <div id="weight-sliders" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
+      </div>
+      <div id="corr-panel" style="display:none;padding:10px 14px;border-top:1px solid var(--border2);">
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">
+          Корреляция с <span id="corr-pair-label">парой</span>
+          <span style="color:var(--text-faint);margin-left:6px;">— <span id="corr-data-points">0</span> точек · обновлено: <span id="corr-last-update">—</span></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="corr-table">
+            <thead><tr><th>Фактор</th><th>Корреляция</th><th>Интерпретация</th><th>Вес (авто)</th></tr></thead>
+            <tbody id="corr-tbody">
+              <tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:12px;">Загрузите историю пары для расчёта</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="calib-log" style="padding:4px 14px 8px;font-size:9px;color:var(--text-dim);display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ══ МОДАЛ: ДОБАВИТЬ ПАРУ ══ -->
+  <div class="modal-overlay" id="add-pair-modal">
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-title">Добавить валютную пару</div>
+      <div style="display:grid;gap:8px;padding:14px 0;">
+        <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;gap:8px;">
+          <span style="font-size:9px;color:var(--text-muted);">Символ пары:</span>
+          <input class="cell-input" id="np-symbol" placeholder="GBPCAD" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;gap:8px;">
+          <span style="font-size:9px;color:var(--text-muted);">FRED код базы:</span>
+          <input class="cell-input" id="np-fred-base" placeholder="DEXUSEU, DEXUSUK..." style="width:100%">
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;gap:8px;">
+          <span style="font-size:9px;color:var(--text-muted);">FRED история:</span>
+          <input class="cell-input" id="np-fred-hist" placeholder="DEXUSEU для EUR/USD" style="width:100%">
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;gap:8px;">
+          <span style="font-size:9px;color:var(--text-muted);">Режим данных:</span>
+          <select id="np-mode" style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:9px;padding:3px 6px;">
+            <option value="manual">Вручную</option>
+            <option value="auto">Авто (FRED)</option>
+          </select>
+        </div>
+        <div style="font-size:8px;color:var(--text-dim);background:rgba(76,146,153,.06);border:1px solid rgba(76,146,153,.15);border-radius:3px;padding:6px 8px;">
+          FRED коды истории: DEXUSEU (EUR/USD) · DEXUSUK (GBP/USD) · DEXJPUS (USD/JPY) · DEXSZUS (USD/CHF) · DEXUSAL (AUD/USD) · DEXCAUS (USD/CAD)
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border2);">
+        <button onclick="closeModal('add-pair-modal')" style="background:transparent;border:1px solid var(--border);border-radius:3px;padding:4px 12px;font-size:9px;color:var(--text-muted);cursor:pointer;">Отмена</button>
+        <button onclick="addCustomPair()" style="background:var(--accent);border:none;border-radius:3px;padding:4px 12px;font-size:9px;color:#000;cursor:pointer;font-weight:600;">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+
 </div><!-- /scroll-zone -->
 
 <script>
@@ -3286,7 +3540,15 @@ let state = {
   move: null,
   cvol: null,
   chartTF: '1w',
-  crosshairOn: false
+  crosshairOn: false,
+  releaseDates: {},
+  releaseHistory: {},
+  customWeights: {},
+  weightMode: 'equal',
+  corrValues: {},
+  pairHistory: {},
+  customPairs: {},
+  hiddenRows: {}
 };
 
 /* ─── UTILS ─── */
@@ -3390,64 +3652,44 @@ function getCityTime(utcOff) {
   return new Date(utcMs + utcOff * 3600000);
 }
 
-/* Получить статус биржи по МЕСТНОМУ времени города */
-// ─── Праздники бирж (YYYY-MM-DD в LOCAL дате города) ───
-// NYSE/LSE — общие: Новый год, Рождество, Good Friday, Memorial Day, Independence Day, Labor Day, Thanksgiving
-// CME — аналогично NYSE (сокращённые сессии считаются открытыми)
-// TSE — японские праздники
-const HOLIDAYS = {
-  london:  ['2026-01-01','2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-08-31','2026-12-25','2026-12-26'],
-  ny:      ['2026-01-01','2026-01-19','2026-02-16','2026-04-03','2026-05-25','2026-07-03','2026-07-04','2026-09-07','2026-11-26','2026-11-27','2026-12-25'],
-  cme:     ['2026-01-01','2026-01-19','2026-02-16','2026-04-03','2026-05-25','2026-07-03','2026-07-04','2026-09-07','2026-11-26','2026-12-25'],
-  tokyo:   ['2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-07-20','2026-09-21','2026-09-22','2026-09-23','2026-11-03','2026-11-23','2026-12-23'],
-};
+/* Праздники 2026 (UK/US/JP) — полное закрытие */
+const HOLIDAYS_2026 = [
+  '2026-01-01','2026-01-19','2026-02-16','2026-05-25',
+  '2026-07-03','2026-09-07','2026-11-26','2026-12-25',
+  '2026-05-04','2026-05-25','2026-08-31', // UK
+  '2026-01-01','2026-02-11','2026-03-20','2026-04-29',
+  '2026-05-03','2026-05-04','2026-05-05','2026-07-20',
+  '2026-09-21','2026-11-03','2026-11-23', // JP
+];
 
-function isMarketDay(key) {
-  const c = SESSION_CFG[key];
-  if (!c) return false;
-  const city = getCityTime(c.utcOff);
-  const dow = city.getDay(); // 0=вс, 6=сб
-
-  // CME работает Вс 17:00 – Пт 16:00 (т.е. закрыт только в Сб и Пт 16:00-17:00)
-  if (key === 'cme') {
-    if (dow === 6) return false; // суббота — закрыт
-    return true;
-  }
-
-  // Остальные биржи: только Пн–Пт
+function isMarketDay() {
+  const ist = getIST();
+  const dow = ist.getDay(); // 0=Sun, 6=Sat
   if (dow === 0 || dow === 6) return false;
-
-  // Проверка праздников
-  const y = city.getFullYear();
-  const mo = String(city.getMonth()+1).padStart(2,'0');
-  const d  = String(city.getDate()).padStart(2,'0');
-  const dateStr = `${y}-${mo}-${d}`;
-  const hols = HOLIDAYS[key] || [];
-  if (hols.includes(dateStr)) return false;
-
-  return true;
+  const dateStr = ist.toISOString().split('T')[0];
+  return !HOLIDAYS_2026.includes(dateStr);
 }
 
+/* Получить статус биржи по МЕСТНОМУ времени города */
 function getStatus(key) {
   const c = SESSION_CFG[key];
   if (!c) return 'closed';
-
-  // Сначала проверяем — рабочий ли день
-  if (!isMarketDay(key)) return 'closed';
-
+  if (!isMarketDay()) return 'closed'; // Суббота/воскресенье/праздник
   const city = getCityTime(c.utcOff);
   const h = city.getHours(), m = city.getMinutes();
   const now = toMin(h, m);
 
   if (key === 'cme') {
     // CME Globex: открыт с 17:00 до 16:00 следующего дня (перерыв 16:00–17:00)
+    // Закрыт: 16:00–17:00 CDT
     if (now >= toMin(16,0) && now < toMin(17,0)) return 'closed';
     return 'open';
   }
 
-  if (c.pre  && now >= c.pre.start  && now < c.pre.end)  return 'pre';
-  if (c.main && now >= c.main.start && now < c.main.end) return 'open';
-  if (c.post && now >= c.post.start && now < c.post.end) return 'post';
+  const c2 = c;
+  if (c2.pre && now >= c2.pre.start && now < c2.pre.end) return 'pre';
+  if (c2.main && now >= c2.main.start && now < c2.main.end) return 'open';
+  if (c2.post && now >= c2.post.start && now < c2.post.end) return 'post';
   return 'closed';
 }
 
@@ -3455,18 +3697,16 @@ function getStatus(key) {
 function getProgress(key) {
   const c = SESSION_CFG[key];
   if (!c) return 0;
-
-  if (!isMarketDay(key)) return 0;
-
   const city = getCityTime(c.utcOff);
   const h = city.getHours(), m = city.getMinutes();
   const now = toMin(h, m);
 
   if (key === 'cme') {
-    if (now >= toMin(16,0) && now < toMin(17,0)) return 0;
+    // Полоска: 17:00 → 16:00 (23ч = 1380 мин)
+    if (now >= toMin(16,0) && now < toMin(17,0)) return 0; // перерыв
     let elapsed;
     if (now >= toMin(17,0)) elapsed = now - toMin(17,0);
-    else elapsed = (1440 - toMin(17,0)) + now;
+    else elapsed = (1440 - toMin(17,0)) + now; // после полуночи
     return Math.min(100, (elapsed / 1380) * 100);
   }
 
@@ -3802,419 +4042,12 @@ function toggleSyncLock() {
   if (cb2) cb2.disabled=!syncUnlocked;
 }
 
-/* ─── ИСТОЧНИКИ ДАННЫХ v2 ─── */
-
-// Состояние источников: { macro: [{name,key,type}, ...], vix: [...], calendar: [...], cot: [...] }
-// AbortController для каждого активного запроса
-const _srcControllers = {};
-
-function _srcKey(group, idx) { return `src_${group}_${idx}`; }
-
-function setSrcStatus(group, idx, status, text) {
-  const dot  = document.getElementById(idx !== null ? `srcdot-${group}-${idx}` : `srcg-dot-${group}`);
-  const stEl = document.getElementById(idx !== null ? `srcst-${group}-${idx}` : null);
-  if (dot) { dot.className = `src-status-dot ${status}`; }
-  if (stEl && text !== undefined) stEl.textContent = text;
-  // Обновить групповой индикатор
-  if (idx !== null) updateGroupDot(group);
+function editSource(key) {
+  showNotif(`ℹ Редактирование источника «${key}» — функция в разработке.`,'info');
 }
-
-function updateGroupDot(group) {
-  const gdot = document.getElementById(`srcg-dot-${group}`);
-  if (!gdot) return;
-  // Приоритет: connect > fetch > fail > ok > manual > idle
-  const list = document.getElementById(`srclist-${group}`);
-  if (!list) return;
-  const dots = list.querySelectorAll('.src-status-dot');
-  let best = 'idle';
-  const order = ['connect','fetch','fail','ok','manual','idle'];
-  dots.forEach(d => {
-    const cls = Array.from(d.classList).find(c => c !== 'src-status-dot');
-    if (cls && order.indexOf(cls) < order.indexOf(best)) best = cls;
-  });
-  gdot.className = `src-status-dot ${best}`;
+function addSource() {
+  showNotif('ℹ Добавление источника — функция в разработке.','info');
 }
-
-function addSrcLog(group, idx, msg, type) {
-  const log = document.getElementById(`srclog-${group}-${idx}`);
-  if (!log) return;
-  log.classList.add('show');
-  const line = document.createElement('div');
-  line.className = `src-log-line ${type||''}`;
-  const t = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  line.textContent = `${t} — ${msg}`;
-  log.insertBefore(line, log.firstChild);
-  // Максимум 3 строки
-  while (log.children.length > 3) log.removeChild(log.lastChild);
-}
-
-function saveSrcKey(group, idx, val) {
-  if (!state.srcKeys) state.srcKeys = {};
-  state.srcKeys[`${group}_${idx}`] = val;
-  saveToStorage();
-  const dot = document.getElementById(`srcdot-${group}-${idx}`);
-  const st  = document.getElementById(`srcst-${group}-${idx}`);
-  if (val.trim()) {
-    if (dot) dot.className = 'src-status-dot idle';
-    if (st)  st.textContent = 'Ключ сохранён — нажми ▶ для проверки';
-  } else {
-    if (dot) dot.className = 'src-status-dot idle';
-    if (st)  st.textContent = 'Не настроен — введи API ключ';
-  }
-}
-
-function toggleKeyVis(inputId) {
-  const el = document.getElementById(inputId);
-  if (!el) return;
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
-function toggleSrcGroup(group) {
-  const body = document.getElementById(`srcgb-${group}`);
-  if (body) body.classList.toggle('open');
-}
-
-function toggleSrcHelp(group, idx, event) {
-  event.stopPropagation();
-  // Закрыть все остальные
-  document.querySelectorAll('.src-help-popup').forEach(p => {
-    if (p.id !== `srch-${group}-${idx}`) p.classList.remove('show');
-  });
-  const popup = document.getElementById(`srch-${group}-${idx}`);
-  if (popup) popup.classList.toggle('show');
-}
-
-function closeSrcHelp(group, idx) {
-  const popup = document.getElementById(`srch-${group}-${idx}`);
-  if (popup) popup.classList.remove('show');
-}
-
-// Закрыть попапы при клике вне
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.src-help-popup') && !e.target.closest('.src-ibtn')) {
-    document.querySelectorAll('.src-help-popup').forEach(p => p.classList.remove('show'));
-  }
-});
-
-function moveSrcItem(group, idx, dir) {
-  const list = document.getElementById(`srclist-${group}`);
-  if (!list) return;
-  const items = Array.from(list.children);
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= items.length) return;
-  const item = items[idx];
-  const swap = items[newIdx];
-  if (dir === -1) list.insertBefore(item, swap);
-  else list.insertBefore(swap, item);
-  // Обновить бейджи приоритетов
-  Array.from(list.children).forEach((el, i) => {
-    const badge = el.querySelector('.src-priority-badge');
-    if (badge) badge.textContent = i + 1;
-  });
-}
-
-function removeSrcItem(group, idx) {
-  const item = document.getElementById(`srcitem-${group}-${idx}`);
-  if (item) {
-    item.remove();
-    // Перенумеровать
-    const list = document.getElementById(`srclist-${group}`);
-    if (list) Array.from(list.children).forEach((el, i) => {
-      const badge = el.querySelector('.src-priority-badge');
-      if (badge) badge.textContent = i + 1;
-    });
-  }
-}
-
-function addSrcItem(group) {
-  const list = document.getElementById(`srclist-${group}`);
-  if (!list) return;
-  const idx = list.children.length;
-  const div = document.createElement('div');
-  div.className = 'src-item';
-  div.id = `srcitem-${group}-${idx}`;
-  div.innerHTML = `
-    <div class="src-item-top">
-      <div style="display:flex;align-items:center;gap:4px;">
-        <span class="src-priority-badge">${idx+1}</span>
-        <input class="src-key-input" style="width:100px;" type="text" placeholder="Название источника...">
-      </div>
-      <div class="src-item-btns">
-        <button class="src-ibtn" onclick="moveSrcItem('${group}',${idx},-1)">↑</button>
-        <button class="src-ibtn" onclick="moveSrcItem('${group}',${idx},1)">↓</button>
-        <button class="src-ibtn" onclick="fetchSrcItem('${group}',${idx})">▶</button>
-        <button class="src-ibtn" onclick="stopSrcItem('${group}',${idx})">■</button>
-        <button class="src-ibtn danger" onclick="removeSrcItem('${group}',${idx})">✕</button>
-      </div>
-    </div>
-    <div class="src-key-row">
-      <input class="src-key-input" type="text" placeholder="URL или API ключ..." id="srckey-${group}-${idx}" oninput="saveSrcKey('${group}',${idx},this.value)">
-      <button class="src-ibtn" onclick="toggleKeyVis('srckey-${group}-${idx}')">👁</button>
-    </div>
-    <div class="src-status-row">
-      <div class="src-status-dot idle" id="srcdot-${group}-${idx}"></div>
-      <div class="src-status-text" id="srcst-${group}-${idx}">Не настроен</div>
-    </div>
-    <div class="src-log" id="srclog-${group}-${idx}"></div>
-  `;
-  list.appendChild(div);
-}
-
-// ─── FETCH ФУНКЦИИ ───
-
-function getTimeout() {
-  const el = document.querySelector('#sync-manual-params input[min="5"]');
-  return ((el ? parseInt(el.value) : 10) || 10) * 1000;
-}
-
-function getRetries() {
-  const el = document.querySelector('#sync-manual-params input[min="1"]');
-  return parseInt(el ? el.value : 3) || 3;
-}
-
-// Список CORS-прокси — перебираются по порядку если предыдущий не работает
-const CORS_PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://cors-anywhere.herokuapp.com/${url}`,
-];
-
-async function fetchWithProxy(url, signal) {
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const resp = await fetch(proxy(url), { signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-      if (resp.ok) return resp;
-    } catch(e) {
-      if (signal && signal.aborted) throw e;
-      // Следующий прокси
-    }
-  }
-  throw new Error('Все прокси недоступны');
-}
-
-async function fetchFRED(group, idx) {
-  const keyEl = document.getElementById(`srckey-${group}-${idx}`);
-  const key = (keyEl ? keyEl.value.trim() : '') || (state.srcKeys && state.srcKeys[`${group}_${idx}`]) || '';
-  if (!key) {
-    setSrcStatus(group, idx, 'idle', 'Введи API ключ FRED для загрузки');
-    return false;
-  }
-  const controller = new AbortController();
-  _srcControllers[`${group}_${idx}`] = controller;
-  const timeout = getTimeout();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  const series = {
-    'FEDFUNDS': 'Ставка ФРС',
-    'CPIAUCSL': 'CPI США',
-    'GDP':      'ВВП США',
-    'UNRATE':   'Безработица США',
-    'PAYEMS':   'NFP',
-    'DGS10':    'US10Y',
-    'DGS2':     'US2Y',
-  };
-  const ids = Object.keys(series);
-  let loaded = 0;
-
-  setSrcStatus(group, idx, 'connect', 'Подключение к FRED...');
-  addSrcLog(group, idx, 'Подключение к FRED API...', '');
-
-  try {
-    for (const id of ids) {
-      if (controller.signal.aborted) break;
-      setSrcStatus(group, idx, 'fetch', `Загрузка: ${series[id]}...`);
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${key}&file_type=json&sort_order=desc&limit=1`;
-      const resp = await fetchWithProxy(url, controller.signal);
-      const data = await resp.json();
-      if (data.observations && data.observations.length > 0) {
-        const val = data.observations[0].value;
-        const date = data.observations[0].date;
-        addSrcLog(group, idx, `${series[id]}: ${val} (${date})`, 'ok');
-        loaded++;
-      }
-    }
-    clearTimeout(timer);
-    setSrcStatus(group, idx, 'ok', `Загружено ${loaded}/${ids.length} показателей — ${new Date().toLocaleTimeString('ru-RU')}`);
-    addSrcLog(group, idx, `Успешно: ${loaded} показателей`, 'ok');
-    return true;
-  } catch(e) {
-    clearTimeout(timer);
-    const msg = controller.signal.aborted ? 'Таймаут — нет ответа' : `Сбой: ${e.message}`;
-    setSrcStatus(group, idx, 'fail', msg);
-    addSrcLog(group, idx, msg, 'fail');
-    return false;
-  } finally {
-    delete _srcControllers[`${group}_${idx}`];
-  }
-}
-
-// injectFREDValue удалена — данные FRED показываются только в логе источника,
-// ячейки дашборда заполняются вручную трейдером
-
-async function fetchYahooVIX(group, idx) {
-  const controller = new AbortController();
-  _srcControllers[`${group}_${idx}`] = controller;
-  const timeout = getTimeout();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  setSrcStatus(group, idx, 'connect', 'Подключение к Yahoo Finance...');
-  addSrcLog(group, idx, 'Запрос VIX/MOVE через прокси...', '');
-
-  try {
-    // Yahoo блокирует прямые запросы — используем CORS-прокси
-    setSrcStatus(group, idx, 'fetch', 'Загрузка VIX...');
-    const resp = await fetchWithProxy('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1d', controller.signal);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (price) {
-      addSrcLog(group, idx, `VIX: ${price.toFixed(2)}`, 'ok');
-      // Вставить в ячейку VIX
-      const inputs = document.querySelectorAll('input[data-key*="vix"], input[id*="vix"]');
-      inputs.forEach(inp => { if (!inp.value) inp.value = price.toFixed(2); });
-    }
-    clearTimeout(timer);
-    setSrcStatus(group, idx, 'ok', `VIX: ${price ? price.toFixed(2) : 'н/д'} — ${new Date().toLocaleTimeString('ru-RU')}`);
-    return true;
-  } catch(e) {
-    clearTimeout(timer);
-    const msg = controller.signal.aborted ? 'Таймаут' : `Сбой: ${e.message}`;
-    setSrcStatus(group, idx, 'fail', msg + ' — введи VIX вручную с cboe.com');
-    addSrcLog(group, idx, msg, 'fail');
-    return false;
-  } finally {
-    delete _srcControllers[`${group}_${idx}`];
-  }
-}
-
-async function fetchCalendarJblanked(group, idx) {
-  const keyEl = document.getElementById(`srckey-${group}-${idx}`);
-  const key = (keyEl ? keyEl.value.trim() : '') || (state.srcKeys && state.srcKeys[`${group}_${idx}`]) || '';
-  if (!key) {
-    setSrcStatus(group, idx, 'idle', 'Введи API ключ jblanked для загрузки');
-    return false;
-  }
-  const controller = new AbortController();
-  _srcControllers[`${group}_${idx}`] = controller;
-  const timeout = getTimeout();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  setSrcStatus(group, idx, 'connect', 'Подключение к jblanked...');
-  addSrcLog(group, idx, 'Запрос экон. календаря...', '');
-
-  try {
-    setSrcStatus(group, idx, 'fetch', 'Загрузка событий...');
-    const today = new Date().toISOString().split('T')[0];
-    const url = `https://jblanked.com/news/api/forex-factory/?api_key=${key}&from=${today}&to=${today}`;
-    const resp = await fetchWithProxy(url, controller.signal);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    const events = Array.isArray(data) ? data : (data.data || []);
-    clearTimeout(timer);
-    setSrcStatus(group, idx, 'ok', `Загружено ${events.length} событий — ${new Date().toLocaleTimeString('ru-RU')}`);
-    addSrcLog(group, idx, `Событий за сегодня: ${events.length}`, 'ok');
-    return true;
-  } catch(e) {
-    clearTimeout(timer);
-    const msg = controller.signal.aborted ? 'Таймаут' : `Сбой: ${e.message}`;
-    setSrcStatus(group, idx, 'fail', msg);
-    addSrcLog(group, idx, msg, 'fail');
-    return false;
-  } finally {
-    delete _srcControllers[`${group}_${idx}`];
-  }
-}
-
-async function fetchSrcItem(group, idx) {
-  // Определить тип источника и вызвать нужную функцию
-  if (group === 'macro' && idx === 0)      return fetchFRED(group, idx);
-  if (group === 'vix'   && idx === 0)      return fetchYahooVIX(group, idx);
-  if (group === 'calendar' && idx === 0)   return fetchCalendarJblanked(group, idx);
-  // Кастомный источник — попробовать как URL
-  const keyEl = document.getElementById(`srckey-${group}-${idx}`);
-  const url = keyEl ? keyEl.value.trim() : '';
-  if (!url) {
-    setSrcStatus(group, idx, 'idle', 'Введи URL или API ключ');
-    return false;
-  }
-  await fetchCustomSource(group, idx, url);
-}
-
-async function fetchCustomSource(group, idx, url) {
-  const controller = new AbortController();
-  _srcControllers[`${group}_${idx}`] = controller;
-  const timeout = getTimeout();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  setSrcStatus(group, idx, 'connect', 'Подключение...');
-  try {
-    setSrcStatus(group, idx, 'fetch', 'Загрузка данных...');
-    const resp = await fetchWithProxy(url, controller.signal);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    clearTimeout(timer);
-    setSrcStatus(group, idx, 'ok', `Ответ получен — ${new Date().toLocaleTimeString('ru-RU')}`);
-    addSrcLog(group, idx, 'Данные получены', 'ok');
-    return true;
-  } catch(e) {
-    clearTimeout(timer);
-    const msg = controller.signal.aborted ? 'Таймаут' : `Сбой: ${e.message}`;
-    setSrcStatus(group, idx, 'fail', msg);
-    addSrcLog(group, idx, msg, 'fail');
-    return false;
-  } finally {
-    delete _srcControllers[`${group}_${idx}`];
-  }
-}
-
-function stopSrcItem(group, idx) {
-  const ctrl = _srcControllers[`${group}_${idx}`];
-  if (ctrl) {
-    ctrl.abort();
-    delete _srcControllers[`${group}_${idx}`];
-    setSrcStatus(group, idx, 'idle', 'Остановлено вручную');
-    addSrcLog(group, idx, 'Запрос остановлен', '');
-  }
-}
-
-async function fetchGroup(group) {
-  // Перебрать источники по порядку — Fallback Chain
-  const list = document.getElementById(`srclist-${group}`);
-  if (!list) return;
-  const items = Array.from(list.children);
-  for (let i = 0; i < items.length; i++) {
-    const ok = await fetchSrcItem(group, i);
-    if (ok) return; // Успех — следующие не нужны
-  }
-  // Все источники не сработали
-  const gdot = document.getElementById(`srcg-dot-${group}`);
-  if (gdot) gdot.className = 'src-status-dot fail';
-  showNotif(`⚠ Все источники «${group}» недоступны — введи данные вручную.`, 'warn');
-}
-
-function stopGroup(group) {
-  const list = document.getElementById(`srclist-${group}`);
-  if (!list) return;
-  Array.from(list.children).forEach((_, i) => stopSrcItem(group, i));
-}
-
-// Инициализация ключей из state при загрузке
-function initSrcKeys() {
-  if (!state.srcKeys) return;
-  Object.entries(state.srcKeys).forEach(([k, val]) => {
-    const [group, idx] = k.replace('src_','').split('_').slice(-2);
-    const el = document.getElementById(`srckey-${group}-${idx}`);
-    if (el && val) {
-      el.value = val;
-      const st = document.getElementById(`srcst-${group}-${idx}`);
-      if (st) st.textContent = 'Ключ загружен — нажми ▶ для проверки';
-      const dot = document.getElementById(`srcdot-${group}-${idx}`);
-      if (dot) dot.className = 'src-status-dot idle';
-    }
-  });
-}
-
-// Заглушки больше не нужны
-function editSource(key) {}
-function addSource() {}
 
 /* ─── БЛОКИ ─── */
 function toggleBlock(bodyId, arrowId, gearId) {
@@ -4295,6 +4128,7 @@ function onPairChange(pair) {
   state.pair=pair;
   updatePairLabels(pair);
   updateVolPairLabel(pair);
+  updateCalibPairName();
   generateAutotext();
   saveToStorage();
 }
@@ -4925,73 +4759,10 @@ function autoSaveData() {
 
 /* ─── СОХРАНИТЬ И ЗАКРЫТЬ ─── */
 function saveAndClose() {
-  saveToStorage();
-  showNotif('✅ Данные сохранены', 'ok');
-  setTimeout(() => window.close(), 600);
-}
-
-function exportData() {
-  // Собрать все данные дашборда
-  const data = {
-    version: '2.0',
-    exported: new Date().toISOString(),
-    state: state,
-    inputs: {},
-  };
-  // Сохранить значения всех input/textarea/select
-  document.querySelectorAll('input[data-key], textarea[data-key], select[data-key]').forEach(el => {
-    data.inputs[el.dataset.key] = el.value;
-  });
-  // Также сохранить всё что есть в localStorage
-  const lsData = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('meridian1')) lsData[k] = localStorage.getItem(k);
-  }
-  data.localStorage = lsData;
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const d = new Date();
-  const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-  a.href = url;
-  a.download = `meridian1_data_${ds}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showNotif('✅ Файл сохранён: meridian1_data_' + ds + '.json', 'ok');
-}
-
-function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      // Восстановить localStorage
-      if (data.localStorage) {
-        Object.entries(data.localStorage).forEach(([k,v]) => localStorage.setItem(k, v));
-      }
-      // Восстановить state
-      if (data.state) {
-        Object.assign(state, data.state);
-        applyTheme(state.theme || 'lamp');
-      }
-      // Восстановить значения инпутов
-      if (data.inputs) {
-        Object.entries(data.inputs).forEach(([k,v]) => {
-          const el = document.querySelector(`[data-key="${k}"]`);
-          if (el) el.value = v;
-        });
-      }
-      showNotif('✅ Данные загружены из файла: ' + file.name, 'ok');
-      event.target.value = ''; // сброс input
-    } catch(err) {
-      showNotif('⚠ Ошибка чтения файла: ' + err.message, 'warn');
-    }
-  };
-  reader.readAsText(file);
+  saveDataFile();
+  setTimeout(()=>{
+    window.close();
+  }, 800);
 }
 
 /* ─── МОДАЛЬНЫЕ ОКНА ─── */
@@ -5034,9 +4805,6 @@ function init() {
   }
 
   // ET удалён, подпись IST всегда автоматически
-
-  // Источники данных — восстановить ключи
-  initSrcKeys();
 
   // Секунды — инициализация кнопок (главная панель + панель сессий)
   {
@@ -5085,6 +4853,9 @@ function init() {
   // Задачи из localStorage
   renderTasks();
 
+  restoreHiddenRows();
+  initCalibrator();
+  startRiskAutoUpdate();
   console.log('Meridian 1 v2.0 — Инициализация завершена');
 }
 
@@ -5111,6 +4882,360 @@ function toggleTask(id,done) {
 
 /* ─── РАЗМЕР COLD-START ─── */
 window.addEventListener('resize', ()=>{ drawChart(); });
+
+
+/* ══════════════════════════════════════════════
+   NEW ENGINE: Tables v3, Calibrator
+══════════════════════════════════════════════ */
+
+/* FRED PAIR HISTORY MAPPING */
+const FRED_PAIR_HISTORY = {
+  'EURUSD': 'DEXUSEU', 'GBPUSD': 'DEXUSUK', 'USDJPY': 'DEXJPUS',
+  'USDCHF': 'DEXSZUS', 'AUDUSD': 'DEXUSAL', 'NZDUSD': 'DEXUSNZ',
+  'USDCAD': 'DEXCAUS', 'EURGBP': null, 'EURJPY': null, 'GBPJPY': null,
+};
+
+/* [?] ВСПЛЫВАШКА */
+function showHelp(event, cardId) {
+  event.stopPropagation();
+  document.querySelectorAll('.help-card.open').forEach(c => c.classList.remove('open'));
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.classList.add('open');
+  const btn = event.currentTarget;
+  const r = btn.getBoundingClientRect();
+  card.style.top = (r.bottom + 6) + 'px';
+  card.style.left = Math.min(r.left, window.innerWidth - 340) + 'px';
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.help-btn')) document.querySelectorAll('.help-card.open').forEach(c => c.classList.remove('open'));
+});
+
+/* СЮРПРИЗ */
+function calcSurprise(pfx, key) {
+  const factEl = document.getElementById(`${pfx}-fact-${key}`);
+  const consEl = document.getElementById(`${pfx}-cons-${key}`);
+  const surpEl = document.getElementById(`${pfx}-surp-${key}`);
+  if (!surpEl) return;
+  const fact = parseFloat(factEl?.value);
+  const cons = parseFloat(consEl?.value);
+  if (isNaN(fact) || isNaN(cons)) { surpEl.textContent='—'; surpEl.className='cell-surprise'; return; }
+  const diff = fact - cons;
+  surpEl.textContent = (diff>0?'+':'') + diff.toFixed(2);
+  surpEl.className = 'cell-surprise ' + (diff>0?'pos':diff<0?'neg':'zero');
+}
+
+/* ЦИКЛ ДАННЫХ */
+function checkReleaseCycle(pfx, key) {
+  const dateEl = document.getElementById(`${pfx}-date-${key}`);
+  if (!dateEl) return;
+  const newDate = dateEl.value.trim();
+  if (!newDate || newDate.length < 10) return;
+  const stKey = `cycle_${pfx}_${key}`;
+  const savedDate = state.releaseDates?.[stKey];
+  if (savedDate && newDate !== savedDate) {
+    const factEl = document.getElementById(`${pfx}-fact-${key}`);
+    const consEl = document.getElementById(`${pfx}-cons-${key}`);
+    const prevEl = document.getElementById(`${pfx}-prev-${key}`);
+    if (factEl && prevEl && factEl.value && factEl.value !== '—') {
+      prevEl.textContent = factEl.value;
+      if (!state.releaseHistory) state.releaseHistory = {};
+      if (!state.releaseHistory[stKey]) state.releaseHistory[stKey] = [];
+      state.releaseHistory[stKey].push({ date: savedDate, fact: factEl.value });
+    }
+    if (factEl) { factEl.value=''; delete state.inputValues[`${pfx}-fact-${key}`]; }
+    if (consEl) { consEl.value=''; delete state.inputValues[`${pfx}-cons-${key}`]; }
+    const surpEl = document.getElementById(`${pfx}-surp-${key}`);
+    if (surpEl) { surpEl.textContent='—'; surpEl.className='cell-surprise'; }
+    showNotif(`🔄 Новый цикл: ${key.toUpperCase()} — факт сохранён в ПРЕД`, 'info');
+  }
+  if (!state.releaseDates) state.releaseDates = {};
+  state.releaseDates[stKey] = newDate;
+  saveToStorage();
+}
+
+/* BOND авто-расчёт */
+function calcBondDerived() {
+  const y10base = parseFloat(document.getElementById('bo-base-y10')?.value);
+  const y10quote = parseFloat(document.getElementById('bo-quote-y10')?.value);
+  const y10factEl = document.getElementById('bo-fact-10ydiff');
+  if (!isNaN(y10base) && !isNaN(y10quote) && y10factEl) {
+    const diff = (y10base - y10quote).toFixed(2);
+    y10factEl.textContent = (diff>0?'+':'')+diff;
+    y10factEl.style.color = diff>0?'var(--accent-green)':diff<0?'var(--accent-red)':'var(--text-dim)';
+  }
+  const y10td = document.getElementById('bo-fact-y10');
+  const y2td = document.getElementById('bo-fact-y2');
+  const ycEl = document.getElementById('bo-fact-yieldcurve');
+  const y10 = parseFloat(y10td?.textContent);
+  const y2 = parseFloat(y2td?.textContent);
+  if (!isNaN(y10) && !isNaN(y2) && ycEl) {
+    const curve = (y10-y2).toFixed(2);
+    ycEl.textContent = (curve>0?'+':'')+curve;
+    ycEl.style.color = curve<0?'var(--accent-red)':'var(--text-dim)';
+  }
+  const cbEl = document.getElementById('m-quote-cbrate');
+  const cpiEl = document.getElementById('e-quote-cpi');
+  const rrEl = document.getElementById('bo-fact-realrate');
+  const cb = parseFloat(cbEl?.value);
+  const cpi = parseFloat(cpiEl?.value);
+  if (!isNaN(cb) && !isNaN(cpi) && rrEl) {
+    const rr = (cb-cpi).toFixed(2);
+    rrEl.textContent = (rr>0?'+':'')+rr;
+    rrEl.style.color = rr>0?'var(--accent-green)':'var(--accent-red)';
+  }
+  recalcIndex();
+}
+
+/* FRED INJECT */
+function injectFREDbond(seriesId, value, date) {
+  const MAP = {
+    'DGS10': { fact:'bo-fact-y10', date:'bo-date-y10' },
+    'DGS2':  { fact:'bo-fact-y2',  date:'bo-date-y2' },
+  };
+  const ids = MAP[seriesId];
+  if (!ids) return;
+  Object.entries(ids).forEach(([col, elId]) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (col==='fact') { el.textContent=value; el.style.color='var(--accent-teal)'; }
+    if (col==='date') { el.textContent=date; }
+  });
+}
+
+/* RISK AUTO-UPDATE */
+let riskAutoTimer = null;
+async function autoUpdateRisk() {
+  try {
+    const resp = await fetchWithProxy('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=5d');
+    const data = await resp.json();
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price) {
+      const factEl = document.getElementById('risk-fact-vix');
+      const prevEl = document.getElementById('risk-prev-vix');
+      const dateEl = document.getElementById('risk-date-vix');
+      if (factEl) {
+        if (prevEl && factEl.value && factEl.value !== price.toFixed(2)) {
+          prevEl.textContent = factEl.value;
+        }
+        factEl.value = price.toFixed(2);
+        onManualInput(factEl, 'risk-fact-vix');
+      }
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString('ru-RU');
+      setSrcStatus('vix', 0, 'ok', `VIX: ${price.toFixed(2)} · авто · ${new Date().toLocaleTimeString('ru-RU')}`);
+    }
+  } catch(e) { /* silent */ }
+}
+function startRiskAutoUpdate() {
+  autoUpdateRisk();
+  if (riskAutoTimer) clearInterval(riskAutoTimer);
+  riskAutoTimer = setInterval(autoUpdateRisk, 15*60*1000);
+}
+
+/* FETCH FRED WITH INJECT */
+async function fetchFREDwithInject(group, idx) {
+  const keyEl = document.getElementById(`srckey-${group}-${idx}`);
+  const key = (keyEl?keyEl.value.trim():'') || (state.srcKeys&&state.srcKeys[`${group}_${idx}`]) || '';
+  if (!key) { setSrcStatus(group,idx,'idle','Введи API ключ FRED'); return false; }
+  const controller = new AbortController();
+  _srcControllers[`${group}_${idx}`] = controller;
+  const timer = setTimeout(()=>controller.abort(), getTimeout());
+  const SERIES = { 'FEDFUNDS':'Ставка ФРС','CPIAUCSL':'CPI США','GDP':'ВВП США','UNRATE':'Безработица','PAYEMS':'NFP','DGS10':'US10Y','DGS2':'US2Y' };
+  const ids = Object.keys(SERIES);
+  let loaded = 0;
+  setSrcStatus(group,idx,'connect','FRED API...');
+  try {
+    for (const id of ids) {
+      if (controller.signal.aborted) break;
+      setSrcStatus(group,idx,'fetch',`${SERIES[id]}...`);
+      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${key}&file_type=json&sort_order=desc&limit=2`;
+      const resp = await fetchWithProxy(url, controller.signal);
+      const data = await resp.json();
+      if (data.observations && data.observations.length>0) {
+        const latest=data.observations[0], prev=data.observations[1];
+        const dec = ['DGS10','DGS2','FEDFUNDS'].includes(id)?2:1;
+        const val = parseFloat(latest.value).toFixed(dec);
+        const prevVal = prev?parseFloat(prev.value).toFixed(dec):null;
+        addSrcLog(group,idx,`${SERIES[id]}: ${val} (${latest.date})`,'ok');
+        injectFREDbond(id, val, latest.date);
+        if (id==='DGS10' && prevVal) { const el=document.getElementById('bo-prev-y10'); if(el) el.textContent=prevVal; }
+        if (id==='DGS2' && prevVal) { const el=document.getElementById('bo-prev-y2'); if(el) el.textContent=prevVal; }
+        loaded++;
+      }
+    }
+    clearTimeout(timer);
+    calcBondDerived();
+    setSrcStatus(group,idx,'ok',`${loaded}/${ids.length} · ${new Date().toLocaleTimeString('ru-RU')}`);
+    return true;
+  } catch(e) {
+    clearTimeout(timer);
+    const msg=controller.signal.aborted?'Таймаут':`Сбой: ${e.message}`;
+    setSrcStatus(group,idx,'fail',msg); addSrcLog(group,idx,msg,'fail'); return false;
+  } finally { delete _srcControllers[`${group}_${idx}`]; }
+}
+
+/* ДОБАВИТЬ ПАРУ */
+function addCustomPair() {
+  const sym = document.getElementById('np-symbol')?.value?.trim()?.toUpperCase();
+  const fredHist = document.getElementById('np-fred-hist')?.value?.trim();
+  const mode = document.getElementById('np-mode')?.value;
+  if (!sym||sym.length<6) { showNotif('⚠ Введи символ пары (6 символов)', 'warn'); return; }
+  const sel = document.getElementById('pair-select');
+  if (sel && !Array.from(sel.options).some(o=>o.value===sym)) {
+    const opt=document.createElement('option'); opt.value=sym; opt.textContent=sym;
+    sel.insertBefore(opt, sel.options[sel.options.length-1]);
+  }
+  if (!state.customPairs) state.customPairs={};
+  state.customPairs[sym]={fredHist,mode};
+  if (fredHist) FRED_PAIR_HISTORY[sym]=fredHist;
+  saveToStorage();
+  closeModal('add-pair-modal');
+  showNotif(`✅ Пара ${sym} добавлена`,'ok');
+}
+
+/* ЗАГРУЗИТЬ ИСТОРИЮ АКТИВНОЙ ПАРЫ */
+async function loadActivePairHistory() {
+  const pair = state.pair;
+  if (!pair) { showNotif('⚠ Выбери валютную пару','warn'); return; }
+  const seriesId = FRED_PAIR_HISTORY[pair] || state.customPairs?.[pair]?.fredHist;
+  if (!seriesId) { showNotif(`⚠ Нет FRED серии для ${pair}. Добавь FRED код через + Пара`,'warn'); return; }
+  const keyEl = document.getElementById('srckey-macro-0');
+  const key = keyEl?.value?.trim() || state.srcKeys?.['macro_0'] || '';
+  if (!key) { showNotif('⚠ Введи FRED API ключ в блоке «Источники данных → FRED»','warn'); return; }
+  const logEl=document.getElementById('calib-log');
+  const statusEl=document.getElementById('calib-hist-status');
+  if (logEl){logEl.style.display='';logEl.textContent=`Загрузка ${pair} (${seriesId})...`;}
+  if (statusEl) statusEl.textContent='Загрузка...';
+  const btn=document.getElementById('btn-load-pair-history');
+  if (btn) btn.disabled=true;
+  try {
+    const url=`https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${key}&file_type=json&sort_order=asc&limit=2000`;
+    const resp=await fetchWithProxy(url);
+    const data=await resp.json();
+    if (!data.observations||data.observations.length===0) throw new Error('Нет данных');
+    const obs=data.observations.filter(o=>o.value!=='.'&&!isNaN(parseFloat(o.value)));
+    if (!state.pairHistory) state.pairHistory={};
+    state.pairHistory[pair]=obs.map(o=>({date:o.date,val:parseFloat(o.value)}));
+    saveToStorage();
+    const pts=obs.length, from=obs[0].date, to=obs[obs.length-1].date;
+    if (logEl) logEl.textContent=`✅ Загружено ${pts} точек · ${from} → ${to}`;
+    if (statusEl) statusEl.textContent=`${pts} точек (${from.slice(0,4)}–${to.slice(0,4)})`;
+    const cpEl=document.getElementById('corr-data-points'); if(cpEl) cpEl.textContent=pts;
+    const luEl=document.getElementById('corr-last-update'); if(luEl) luEl.textContent=new Date().toLocaleString('ru-RU');
+    if (state.weightMode==='corr') calcCorrelations(pair);
+    showNotif(`✅ История ${pair}: ${pts} точек`,'ok');
+  } catch(e) {
+    if (logEl) logEl.textContent=`⚠ Ошибка: ${e.message}`;
+    if (statusEl) statusEl.textContent='Ошибка';
+    showNotif(`⚠ ${pair}: ${e.message}`,'warn');
+  } finally { if(btn) btn.disabled=false; }
+}
+
+/* КАЛИБРАТОР */
+const CALIBR_FACTORS=[
+  {key:'ratediff',label:'Rate Diff',default:18},{key:'realrate',label:'Real Rate',default:16},
+  {key:'cot',label:'COT',default:14},{key:'10ydiff',label:'10Y Diff',default:12},
+  {key:'cpi',label:'CPI',default:10},{key:'vol2vol',label:'Vol2Vol',default:10},
+  {key:'gdp',label:'GDP',default:8},{key:'vix',label:'VIX',default:7},{key:'move',label:'MOVE',default:5},
+];
+
+function buildWeightSliders() {
+  const wrap=document.getElementById('weight-sliders'); if(!wrap) return;
+  wrap.innerHTML='';
+  const mode=state.weightMode||'equal';
+  CALIBR_FACTORS.forEach(f=>{
+    const w=state.customWeights?.[f.key]??f.default;
+    const mult=mode==='equal'?1:w/f.default;
+    const corr=state.corrValues?.[f.key]?`r=${state.corrValues[f.key].toFixed(2)}`:'';
+    const div=document.createElement('div'); div.className='weight-row';
+    div.innerHTML=`<span class="weight-label">${f.label}</span>
+      <input type="range" class="weight-slider" min="0" max="3" step="0.1" value="${mult.toFixed(1)}"
+        ${mode==='manual'?'':'disabled'}
+        oninput="onWeightSlide('${f.key}',this.value,document.getElementById('wval-${f.key}'))">
+      <span class="weight-val" id="wval-${f.key}">×${mult.toFixed(1)}</span>
+      <span class="weight-corr">${corr}</span>`;
+    wrap.appendChild(div);
+  });
+}
+
+function onWeightSlide(factorKey,val,display) {
+  const mult=parseFloat(val);
+  if(display) display.textContent='×'+mult.toFixed(1);
+  const base=CALIBR_FACTORS.find(f=>f.key===factorKey)?.default||10;
+  if(!state.customWeights) state.customWeights={};
+  state.customWeights[factorKey]=Math.round(mult*base);
+  WEIGHTS[factorKey]=state.customWeights[factorKey];
+  recalcIndex(); saveToStorage();
+}
+
+function setWeightMode(mode,btn) {
+  state.weightMode=mode;
+  ['equal','corr','manual'].forEach(m=>document.getElementById(`wm-${m}`)?.classList.toggle('on',m===mode));
+  const desc={equal:'Режим «Равные» — все факторы имеют одинаковый мультипликатор ×1.',corr:'Режим «По корреляции» — веса по исторической корреляции с ценой пары. Требует загрузки истории.',manual:'Режим «Ручные» — перетаскивай слайдеры. Изменения мгновенно пересчитывают индекс.'};
+  const descEl=document.getElementById('wm-desc'); if(descEl) descEl.textContent=desc[mode];
+  const corrPanel=document.getElementById('corr-panel'); if(corrPanel) corrPanel.style.display=mode==='corr'?'':'none';
+  if(mode==='equal'){CALIBR_FACTORS.forEach(f=>{WEIGHTS[f.key]=f.default;if(!state.customWeights)state.customWeights={};state.customWeights[f.key]=f.default;});}
+  else if(mode==='corr'&&state.pair&&state.pairHistory?.[state.pair]) calcCorrelations(state.pair);
+  buildWeightSliders(); recalcIndex(); saveToStorage();
+}
+
+function pearson(x,y){
+  const n=x.length,mx=x.reduce((a,b)=>a+b,0)/n,my=y.reduce((a,b)=>a+b,0)/n;
+  const num=x.reduce((s,xi,i)=>s+(xi-mx)*(y[i]-my),0);
+  const den=Math.sqrt(x.reduce((s,xi)=>s+(xi-mx)**2,0))*Math.sqrt(y.reduce((s,yi)=>s+(yi-my)**2,0));
+  return den===0?0:num/den;
+}
+
+function calcCorrelations(pair) {
+  const history=state.pairHistory?.[pair];
+  if(!history||history.length<30){showNotif('⚠ Недостаточно данных (нужно 30+)','warn');return;}
+  const tbody=document.getElementById('corr-tbody');
+  const label=document.getElementById('corr-pair-label'); if(label) label.textContent=pair;
+  const dataHist=(state.dataHistory||[]).sort((a,b)=>a.date.localeCompare(b.date));
+  if(dataHist.length<10){if(tbody)tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:12px;">Мало данных для корреляции</td></tr>';return;}
+  const pairMap={};history.forEach(p=>{pairMap[p.date]=p.val;});
+  const pairs=dataHist.map(d=>({idx:d.index,price:pairMap[d.date]})).filter(d=>d.price!=null);
+  if(pairs.length<10){if(tbody)tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:12px;">Нет пересекающихся дат</td></tr>';return;}
+  const r=pearson(pairs.map(p=>p.idx),pairs.map(p=>p.price));
+  if(!state.corrValues) state.corrValues={};
+  const interp=r>0.6?'Сильная прямая':r>0.3?'Умеренная прямая':r>-0.3?'Слабая':r>-0.6?'Умеренная обратная':'Сильная обратная';
+  CALIBR_FACTORS.forEach(f=>{state.corrValues[f.key]=r;WEIGHTS[f.key]=Math.round(f.default*(0.5+Math.abs(r)*1.5));});
+  if(tbody) tbody.innerHTML=CALIBR_FACTORS.map(f=>`<tr><td>${f.label}</td><td style="color:${r>0?'var(--accent-green)':'var(--accent-red)'}">${r.toFixed(3)}</td><td style="font-size:9px;color:var(--text-dim);">${interp}</td><td style="color:var(--accent-teal);">${WEIGHTS[f.key]}%</td></tr>`).join('');
+  buildWeightSliders(); recalcIndex();
+}
+
+function updateCalibPairName() {
+  const pair=state.pair||'';
+  const el=document.getElementById('calib-pair-name'); if(el) el.textContent=pair||'пары';
+  const label=document.getElementById('corr-pair-label'); if(label) label.textContent=pair||'—';
+}
+
+function initCalibrator() {
+  buildWeightSliders();
+  if(state.weightMode) setWeightMode(state.weightMode,null);
+  updateCalibPairName();
+  if(state.customPairs){
+    const sel=document.getElementById('pair-select');
+    Object.keys(state.customPairs).forEach(sym=>{
+      if(sel&&!Array.from(sel.options).some(o=>o.value===sym)){const opt=document.createElement('option');opt.value=sym;opt.textContent=sym;sel.insertBefore(opt,sel.options[sel.options.length-1]);}
+      if(state.customPairs[sym]?.fredHist) FRED_PAIR_HISTORY[sym]=state.customPairs[sym].fredHist;
+    });
+  }
+}
+
+/* ПОКАЗАТЬ/СКРЫТЬ СТРОКУ */
+function toggleRow(rowId,visible) {
+  const row=document.querySelector(`tr[data-row="${rowId}"]`);
+  if(row) row.style.display=visible?'':'none';
+  if(!state.hiddenRows) state.hiddenRows={};
+  if(visible) delete state.hiddenRows[rowId]; else state.hiddenRows[rowId]=true;
+  saveToStorage();
+}
+function restoreHiddenRows() {
+  if(!state.hiddenRows) return;
+  Object.keys(state.hiddenRows).forEach(id=>{const row=document.querySelector(`tr[data-row="${id}"]`);if(row) row.style.display='none';});
+}
+
 
 /* ─── ЗАПУСК ─── */
 document.addEventListener('DOMContentLoaded', init);
