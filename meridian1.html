@@ -5041,7 +5041,7 @@ function startRiskAutoUpdate() {
 /* FETCH FRED WITH INJECT */
 async function fetchFREDwithInject(group, idx) {
   const keyEl = document.getElementById(`srckey-${group}-${idx}`);
-  const key = (keyEl?keyEl.value.trim():'') || (state.srcKeys&&state.srcKeys[`${group}_${idx}`]) || '';
+  const key = (keyEl?keyEl.value.trim():'') || (state.srcKeys&&state.srcKeys[group]&&state.srcKeys[group][idx]) || (()=>{try{return localStorage.getItem(`srckey_${group}_${idx}`)||'';}catch(e){return '';}})();
   if (!key) { setSrcStatus(group,idx,'idle','Введи API ключ FRED'); return false; }
   const controller = new AbortController();
   _srcControllers[`${group}_${idx}`] = controller;
@@ -5247,23 +5247,15 @@ function restoreHiddenRows() {
 function getTimeout() { return (state.fetchTimeout||15)*1000; }
 
 function setSrcStatus(group, idx, status, msg) {
-  const dotEl = document.querySelector(`.src-status-dot[data-group="${group}"][data-idx="${idx}"]`);
-  const msgEl = document.querySelector(`.src-status-msg[data-group="${group}"][data-idx="${idx}"]`);
   const colors = { ok:'#4caf50', fail:'#f44336', fetch:'#ff9800', connect:'#2196f3', idle:'#888' };
-  if (dotEl) dotEl.style.background = colors[status]||'#888';
-  if (msgEl) msgEl.textContent = msg||'';
-  // fallback — ищем по id
-  const fbDot = document.getElementById(`src-dot-${group}-${idx}`);
-  const fbMsg = document.getElementById(`src-msg-${group}-${idx}`);
-  if (fbDot) fbDot.style.background = colors[status]||'#888';
-  if (fbMsg) fbMsg.textContent = msg||'';
-  // обновляем текст статуса под полем ввода
-  const legacyMsg = document.getElementById(`srckey-${group}-${idx}-status`);
-  if (legacyMsg) legacyMsg.textContent = msg||'';
+  const dot = document.getElementById(`srcdot-${group}-${idx}`);
+  const txt = document.getElementById(`srcst-${group}-${idx}`);
+  if (dot) { dot.style.background = colors[status]||'#888'; dot.className = `src-status-dot ${status}`; }
+  if (txt) txt.textContent = msg||'';
 }
 
 function addSrcLog(group, idx, text, type) {
-  const logEl = document.getElementById(`src-log-${group}-${idx}`);
+  const logEl = document.getElementById(`srclog-${group}-${idx}`);
   if (!logEl) return;
   const line = document.createElement('div');
   line.style.color = type==='ok'?'#4caf50':type==='fail'?'#f44336':'#ccc';
