@@ -4031,7 +4031,6 @@ async function fetchFRED(group, idx) {
         const date = data.observations[0].date;
         addSrcLog(group, idx, `${series[id]}: ${val} (${date})`, 'ok');
         loaded++;
-        injectFREDValue(id, val, date);
       }
     }
     clearTimeout(timer);
@@ -4049,28 +4048,8 @@ async function fetchFRED(group, idx) {
   }
 }
 
-function injectFREDValue(seriesId, val, date) {
-  // Маппинг FRED series → input key в дашборде
-  const map = {
-    'FEDFUNDS': 'fed-rate',
-    'CPIAUCSL': 'cpi-us',
-    'GDP':      'gdp-us',
-    'UNRATE':   'unemployment',
-    'PAYEMS':   'nfp',
-    'DGS10':    'us10y',
-    'DGS2':     'us2y',
-  };
-  const inputKey = map[seriesId];
-  if (!inputKey) return;
-  // Попробовать найти input с data-key или id содержащим этот ключ
-  const inputs = document.querySelectorAll(`input[data-key*="${inputKey}"], input[id*="${inputKey}"]`);
-  inputs.forEach(inp => {
-    if (!inp.value || inp.value === '') {
-      inp.value = parseFloat(val).toFixed(2);
-      inp.classList.add('manual');
-    }
-  });
-}
+// injectFREDValue удалена — данные FRED показываются только в логе источника,
+// ячейки дашборда заполняются вручную трейдером
 
 async function fetchYahooVIX(group, idx) {
   const controller = new AbortController();
